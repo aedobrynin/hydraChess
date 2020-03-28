@@ -1,0 +1,15 @@
+.notification {
+}
+
+.notification-nickname {
+    font-weight: bold;
+    color: lightsteelblue;
+}
+
+.notification-game-state {
+    font-weight: bolder;
+}
+
+.notification-res-reason {
+
+}
