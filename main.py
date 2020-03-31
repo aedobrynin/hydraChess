@@ -103,11 +103,14 @@ def search_game(*args, **kwargs):
     users_in_search = db.session.query(User).filter(User.in_search == 1).all()
     users_in_search.sort(key=lambda x: abs(current_user.rating - x.rating))
 
-    if users_in_search:
+    if users_in_search and\
+       abs(current_user.rating - users_in_search[0].rating) <= 200:
         user_to_play_with = users_in_search[0]
+
         game = Game(user_white_pieces_id=current_user.id,
                     user_black_pieces_id=user_to_play_with.id,
                     is_started=0)
+
         db.session.add(game)
         db.session.commit()
 
@@ -148,8 +151,8 @@ def send_message(*args, **kwargs) -> None:
 @authenticated_only
 def on_connect(*args, **kwargs) -> None:
     user_id = current_user.id
-    if current_user.sid:
-        disconnect(sid=current_user.sid)
+    # if current_user.sid:
+    #     disconnect(sid=current_user.sid)
 
     sio.emit("set_data",
              {"nickname": current_user.login,
@@ -170,6 +173,9 @@ def on_connect(*args, **kwargs) -> None:
 def on_disconnect(*args, **kwargs) -> None:
     if current_user.cur_game_id is not None:
         leave_room(current_user.cur_game_id, sid=request.sid)
+
+    if current_user.in_search:
+        current_user.in_search = False
 
     db.session.merge(current_user)
     db.session.commit()

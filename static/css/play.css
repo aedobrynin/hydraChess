@@ -13,3 +13,18 @@
 .notification-res-reason {
 
 }
+
+
+.highlight-source, .highlight-target {
+  box-shadow: inset 0 0 4px 4px #ed9e3d;/*#f9df59;*/
+}
+
+
+.highlight-move-source, .highlight-move-target {
+  box-shadow: inset 0 0 4px 4px #d89038;
+}
+
+
+.highlight-check {
+  box-shadow: inset 0 0 4px 4px red;
+}

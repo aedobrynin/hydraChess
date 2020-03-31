@@ -62,7 +62,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Libraries used
 
 * [chess.js](https://github.com/jhlywa/chess.js) - Used to check moves and game state on client side.
-* [chessboard.js](https://github.com/oakmac/chessboardjs/) - Client side chess board
+* [chessboard.js] (Own fork) (https://github.com/hashlib/chessboardjs/) - Client side chess board
 * [Celery](https://github.com/celery/celery) - Used to run different tasks on server side
 * [Flask](https://github.com/pallets/flask) - Main server side framework
 * There are also different add-ons for Flask (Flask-Login, Flask-SQLAlchemy, etc...)
