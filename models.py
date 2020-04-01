@@ -71,3 +71,11 @@ class Game(db.Model, SerializerMixin):
                             default=0)
 
     result = db.Column(db.String)
+
+
+class CeleryScheduled(db.Model):
+    __tablename__ = "celery_scheduled"
+
+    task_id = db.Column(db.Integer, unique=True)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id'),
+                        primary_key=True)

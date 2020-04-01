@@ -1,12 +1,19 @@
 ;(function () {
-	var board = null
+  var board = null
 	var $board = $("#main_board")
 	var color = null
-	var game = new Chess()
+	var game = null
 	var nickname = null
 	var rating = null
 	var rating_changes = null
+  var cur_timer_id = null
 
+  function getFullmoveNumber() {
+    if (game == null) return 0
+    var fen = game.fen()
+    var fullmoveNumber = parseInt(fen.split(' ')[5])
+    return fullmoveNumber
+  }
 
 	function messagesBoxResize() {
 		width = $(window).width()
@@ -27,7 +34,6 @@
 		}
 	}
 
-
 	function sendMessage() {
 		message = document.getElementById("message_input").value.trim()
 		document.getElementById("message_input").value = ""
@@ -37,18 +43,15 @@
 	}
 
 
+	function pushNotification(message) {
+		document.getElementById("messages_box").innerHTML += message
+		$("#messages_box").scrollTop($("#messages_box")[0].scrollHeight)
+	}
+
 	function onGetMessage(data) {
 		message = `<span class="notification-nickname">${data.sender}</span>: ${data.message}<br>`
-		document.getElementById("messages_box").innerHTML += message
-		$("#messages_box").scrollTop($("#messages_box")[0].scrollHeight)
+    pushNotification(message)
 	}
-
-
-	function notificationMessage(message) {
-		document.getElementById("messages_box").innerHTML += message
-		$("#messages_box").scrollTop($("#messages_box")[0].scrollHeight)
-	}
-
 
 	function updateRating() {
 		document.getElementById("own_rating").innerHTML = `(${rating})`
@@ -97,12 +100,13 @@
 
 
 	function onDragStart(source, piece, position, orientation) {
-		if (game.game_over() || color[0] != piece[0]) return false
+		if (game == null || game.game_over() || color != piece[0]) return false
 	}
 
 
 	function onDrop(source, target) {
-		if (color[0] != game.turn()) return 'snapback'
+    if (game == null) return 'snapback'
+		if (color != game.turn()) return 'snapback'
 
 		var move = game.move({
 			from: source,
@@ -141,10 +145,15 @@
 	function onGameStarted(data) {
 		removeHighlights()
 
-		game.load(data.fen)
+    game = new Chess(data.fen)
 		board.position(game.fen())
-		board.orientation(data.color)
-		color = data.color
+
+    color = data.color
+    if (color == 'w')
+      board.orientation('white')
+    else
+      board.orientation('black')
+
 		rating_changes = data.rating_changes
 		opp_nickname = data.opp_nickname
 		opp_rating = data.opp_rating
@@ -154,33 +163,91 @@
 		$('#find_game_btn').prop('disabled', true)
 		$('#message_input').prop('readonly', false)
 
-		message = `<div class="notification">
-								<div class="notification-game-state">NEW GAME</div>
-								<span class="notification-nickname">${nickname}</span> (${rating}) VS
-								<span class="notification-nickname">${opp_nickname}</span> (${opp_rating})<br>
-								win +${rating_changes.win} / draw ${(rating_changes.draw <= 0 ? "" : "+") + rating_changes.draw} / lose ${rating_changes.lose}
-							 </div>`
-		notificationMessage(message)
+
+		notification = `<div class="notification">
+							        <div class="notification-game-state">NEW GAME</div>
+								      <span class="notification-nickname">${nickname}</span> (${rating}) VS
+								      <span class="notification-nickname">${opp_nickname}</span> (${opp_rating})<br>
+								      <span class="rating-changes">
+                        win +${rating_changes.win} / draw ${(rating_changes.draw <= 0 ? "" : "+") + rating_changes.draw} / lose ${rating_changes.lose}
+                      </span>
+							      </div>`
+
+    if (document.getElementById("messages_box").innerHTML.length != 0)
+      notification = '<br>' + notification
+
+		pushNotification(notification)
+
+    if (color == game.turn() && getFullmoveNumber() == 1) {
+      addFirstMoveTimer();
+    }
 	}
 
+  function addFirstMoveTimer() {
+    notification = `<div class="notification">
+                      <div class="timer-container">
+                        You have <span class="timer">15</span> seconds for your first move
+                      </div>
+                    </div>`
+
+    pushNotification(notification)
+
+    setTimeout(updateTimer, 1000)
+  }
+
+  function updateTimer() {
+    var $timer = $(".timer")
+
+    if ($timer.length == 0) return
+
+    cur_value = parseInt($timer.html())
+
+    if (cur_value == 0) removeTimer()
+    else {
+      $timer.html(cur_value - 1)
+      setTimeout(updateTimer, 1000)
+    }
+  }
+
+  function removeTimer() {
+    $(".timer-container").remove()
+  }
+
 	function onGameUpdated(data) {
-		move = game.move(data.san)
+	move = game.move(data.san)
 
 		removeHighlights()
 		addHighlights(move.from, move.to)
     if (game.in_check()) {
       highlightChecked()
     }
+
+    if (color == 'b' && getFullmoveNumber() == 1)
+    {
+      addFirstMoveTimer()
+    }
+    else if (color == 'w' && game.turn() == 'b' && getFullmoveNumber() == 1)
+    {
+      removeTimer()
+    }
+    else if (color == 'b' && game.turn() == 'w' && getFullmoveNumber() == 2)
+    {
+      removeTimer()
+    }
+
 		board.position(game.fen())
 	}
 
-
 	function onGameEnded(data) {
+    removeTimer()
+
 		result = data.result
+    reason = data.reason
 		rating_delta = null
 		if (result == 'won') rating_delta = rating_changes.win
 		else if (result == 'draw') rating_delta = rating_changes.draw
 		else if (result == 'lost') rating_delta = rating_changes.lose
+    else rating_delta = 0
 
 		rating += rating_delta
 
@@ -191,11 +258,14 @@
 		$('#find_game_btn').prop('disabled', false)
 		$('#message_input').prop('readonly', true)
 
-		message = `<div class="notification">
-								 <div class="notification-game-state">GAME ${result.toUpperCase()}</div>
-								 Your new rating: ${rating} (${(rating_delta <= 0 ? "" : "+") + rating_delta})
-							 </div>`
-		notificationMessage(message)
+		notification = `<div class="notification">
+								      <div class="notification-game-state">GAME ${result.toUpperCase()}</div>
+                      <div class="notification-res-reason">${reason}</div>
+                      <span class="new-rating">New rating: ${rating} (${(rating_delta <= 0 ? "" : "+") + rating_delta})</span>
+							      </div>`
+    pushNotification(notification)
+
+    game = null
 	}
 
 

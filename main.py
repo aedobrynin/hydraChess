@@ -7,7 +7,7 @@ from flask_socketio import SocketIO, join_room, disconnect, leave_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 from flask_migrate import Migrate
-from models import db, User, Game
+from models import db, User, Game, CeleryScheduled
 from forms import RegisterForm, LoginForm
 
 
@@ -16,7 +16,7 @@ app.config['SECRET_KEY'] = 'abacabadabacaba'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///./database.db'
 app.config['CELERY_BROKER_URL'] = 'amqp://localhost//'
-app.config['CELERY_RESULT_BACKEND'] = 'amqp://localhost//'
+app.config['CELERY_RESULT_BACKEND'] = 'rpc'
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -96,6 +96,10 @@ def sign_in():
 @sio.on('search')
 @authenticated_only
 def search_game(*args, **kwargs):
+    """Marks user as "in search" or pairs him with another user from search.
+        Chooses opponent by |opp.rating - user.rating|.
+        If the value more than 200, user marks as 'in search'"""
+
     if any([current_user.cur_game_id, current_user.in_search]):
         print("Already in search/in game")
         return
@@ -136,6 +140,7 @@ def search_game(*args, **kwargs):
 @sio.on('send_message')
 @authenticated_only
 def send_message(*args, **kwargs) -> None:
+    """Sends message to game chat"""
     if current_user.cur_game_id is None:
         return
 
@@ -209,10 +214,13 @@ def unauth_handler():
 
 
 @app.before_first_request
-def clear_sids():
+def prepare_database():
+    """Clears user sids and drops celery_scheduled table"""
     for user in db.session.query(User).all():
         user.sid = None
         db.session.merge(user)
+
+    db.session.query(CeleryScheduled).delete()
     db.session.commit()
 
 
