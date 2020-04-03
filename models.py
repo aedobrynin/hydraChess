@@ -23,7 +23,7 @@ class User(db.Model, UserMixin, SerializerMixin):
     hashed_password = db.Column(db.String,
                                 nullable=False)
 
-    rating = db.Column(db.Float(precision=2), default=1200)
+    rating = db.Column(db.Integer, default=1200)
 
     games_played = db.Column(db.Integer, default=0)
 
