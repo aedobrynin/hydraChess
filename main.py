@@ -208,7 +208,7 @@ def unauth_handler():
 @app.before_first_request
 def prepare_database():
     """Clears user sids and drops celery_scheduled table"""
-    for user in db.session.query(User).all():
+    for user in db.session.query(User):
         user.sid = None
         db.session.merge(user)
 
