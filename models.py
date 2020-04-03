@@ -73,9 +73,19 @@ class Game(db.Model, SerializerMixin):
     result = db.Column(db.String)
 
 
-class CeleryScheduled(db.Model):
-    __tablename__ = "celery_scheduled"
+class CeleryTaskTypes(db.Model):
+    __tablename__ = "celery_task_types"
 
-    task_id = db.Column(db.Integer, unique=True)
-    game_id = db.Column(db.Integer, db.ForeignKey('games.id'),
+    id = db.Column(db.Integer, primary_key=True, unique=True)
+    name = db.Column(db.String, nullable=False)
+
+
+class CeleryTask(db.Model):
+    __tablename__ = "celery_tasks"
+
+    id = db.Column(db.Integer, primary_key=True, unique=True)
+    type_id = db.Column(db.Integer, db.ForeignKey('celery_task_types.id'),
                         primary_key=True)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id'), default=None)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), default=None)
+    eta = db.Column(db.DateTime, default=None)
