@@ -7,7 +7,7 @@ from flask_socketio import SocketIO, join_room, disconnect, leave_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 from flask_migrate import Migrate
-from models import db, User, Game, CeleryScheduled
+from models import db, User, Game, CeleryTask
 from forms import RegisterForm, LoginForm
 
 
@@ -155,22 +155,13 @@ def send_message(*args, **kwargs) -> None:
 @sio.on('connect')
 @authenticated_only
 def on_connect(*args, **kwargs) -> None:
-    user_id = current_user.id
-    # if current_user.sid:
-    #     disconnect(sid=current_user.sid)
-
-    sio.emit("set_data",
-             {"nickname": current_user.login,
-              "rating": int(current_user.rating)},
-             room=request.sid)
-
     current_user.sid = request.sid
     db.session.merge(current_user)
     db.session.commit()
-    game_id = current_user.cur_game_id
-    if game_id:
-        join_room(game_id, request.sid)
-        game_management.reconnect.delay(game_id, user_id)
+
+    if current_user.cur_game_id:
+        join_room(current_user.cur_game_id, sid=current_user.sid)
+    game_management.on_connect.delay(current_user.id)
 
 
 @sio.on('disconnect')
@@ -178,7 +169,8 @@ def on_connect(*args, **kwargs) -> None:
 def on_disconnect(*args, **kwargs) -> None:
     if current_user.cur_game_id is not None:
         leave_room(current_user.cur_game_id, sid=request.sid)
-
+        game_management.on_disconnect.delay(current_user.id,
+                                            current_user.cur_game_id)
     if current_user.in_search:
         current_user.in_search = False
 
@@ -220,7 +212,7 @@ def prepare_database():
         user.sid = None
         db.session.merge(user)
 
-    db.session.query(CeleryScheduled).delete()
+    db.session.query(CeleryTask).delete()
     db.session.commit()
 
 

@@ -6,7 +6,7 @@
 	var nickname = null
 	var rating = null
 	var rating_changes = null
-  var cur_timer_id = null
+
 
   function getFullmoveNumber() {
     if (game == null) return 0
@@ -117,7 +117,10 @@
 		// illegal move
 		if (move === null) return 'snapback'
 
+
 		removeHighlights()
+    removeTimer('first-move-timer')
+
     if (game.in_check()) {
       highlightChecked()
 		}
@@ -177,44 +180,52 @@
       notification = '<br>' + notification
 
 		pushNotification(notification)
-
-    if (color == game.turn() && getFullmoveNumber() == 1) {
-      addFirstMoveTimer();
-    }
 	}
 
-  function addFirstMoveTimer() {
+  function addFirstMoveTimer(waitTime) {
     notification = `<div class="notification">
-                      <div class="timer-container">
-                        You have <span class="timer">15</span> seconds for your first move
+                      <div class="timer-container" id="first-move-timer">
+                        You have <span class="timer">${waitTime}</span> seconds for your first move
                       </div>
                     </div>`
 
     pushNotification(notification)
-
-    setTimeout(updateTimer, 1000)
+    setTimeout(updateTimer, 1000, "first-move-timer")
   }
 
-  function updateTimer() {
-    var $timer = $(".timer")
+
+  function addOppDisconnectedTimer(waitTime) {
+    notification = `<div class="notification">
+                      <div class="timer-container" id="opp-disconnected-timer">
+                        Opponent has <span class="timer">${waitTime}</span> seconds to reconnect
+                      </div>
+                    </div>`
+
+    pushNotification(notification)
+    setTimeout(updateTimer, 1000, "opp-disconnected-timer")
+  }
+
+
+  function updateTimer(timerId) {
+    var $timer = $("#" + timerId).find('.timer')
 
     if ($timer.length == 0) return
 
     cur_value = parseInt($timer.html())
 
-    if (cur_value == 0) removeTimer()
+    if (cur_value == 0) removeTimer(timerId)
     else {
       $timer.html(cur_value - 1)
-      setTimeout(updateTimer, 1000)
+      setTimeout(updateTimer, 1000, timerId)
     }
   }
 
-  function removeTimer() {
-    $(".timer-container").remove()
+  function removeTimer(timerId) {
+    $("#" + timerId).parent().remove()
   }
 
 	function onGameUpdated(data) {
-	move = game.move(data.san)
+  	move = game.move(data.san)
 
 		removeHighlights()
 		addHighlights(move.from, move.to)
@@ -222,24 +233,11 @@
       highlightChecked()
     }
 
-    if (color == 'b' && getFullmoveNumber() == 1)
-    {
-      addFirstMoveTimer()
-    }
-    else if (color == 'w' && game.turn() == 'b' && getFullmoveNumber() == 1)
-    {
-      removeTimer()
-    }
-    else if (color == 'b' && game.turn() == 'w' && getFullmoveNumber() == 2)
-    {
-      removeTimer()
-    }
-
 		board.position(game.fen())
 	}
 
 	function onGameEnded(data) {
-    removeTimer()
+    removeTimer('first-move-timer')
 
 		result = data.result
     reason = data.reason
@@ -268,9 +266,21 @@
     game = null
 	}
 
+  function onFirstMoveWaiting(data) {
+    var waitTime = data.wait_time
+    addFirstMoveTimer(waitTime)
+  }
 
-	function searchGame()
-	{
+  function onOppDisconnected(data) {
+    var waitTime = data.wait_time
+    addOppDisconnectedTimer(waitTime)
+  }
+
+  function onOppReconnected() {
+    removeTimer('opp-disconnected-timer')
+  }
+
+	function searchGame() {
 		sio.emit('search')
 		$('#find_game_btn').prop('disabled', true)
 	}
@@ -297,6 +307,9 @@
 	sio.on('game_ended', onGameEnded)
 	sio.on('set_data', onSetData)
 	sio.on('get_message', onGetMessage)
+  sio.on('first_move_waiting', onFirstMoveWaiting)
+  sio.on('opp_disconnected', onOppDisconnected)
+  sio.on('opp_reconnected', onOppReconnected)
 
 
 	window.searchGame = searchGame
