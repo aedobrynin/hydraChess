@@ -297,8 +297,8 @@ def end_game(game_id: int, result: str,
         update_rating.delay(game.user_black_pieces_id,
                             rating_changes["b"].win)
 
-    update_k_factor.apply_async(args=(game.user_white_pieces_id,), countdown=3)
-    update_k_factor.apply_async(args=(game.user_black_pieces_id,), countdown=3)
+    update_k_factor.delay(game.user_white_pieces_id)
+    update_k_factor.delay(game.user_black_pieces_id)
 
 
 @celery.task(name="send_message", ignore_result=True)

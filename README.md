@@ -42,9 +42,15 @@ $ source dev/bin/activate
 $ sudo service rabbitmq-server start
 ```
 
-* Run the Celery worker
+* Run the Celery workers
 ```
-$ sudo celery -A game_management.celery worker --loglevel=info
+$ sudo celery -A game_management.celery worker -n worker.high -Q high -l=INFO
+```
+```
+$ sudo celery -A game_management.celery worker -n worker.normal -Q normal -l=INFO
+```
+```
+$ sudo celery -A game_management.celery worker -n worker.low -Q low -l=INFO
 ```
 
 * (Optional) run the Celery Flower in order to monitor tasks status
@@ -64,7 +70,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Libraries used
 
 * [chess.js](https://github.com/jhlywa/chess.js) - Used to check moves and game state on client side.
-* [chessboard.js](https://github.com/hashlib/chessboardjs/) (Own fork) - Client side chess board 
+* [chessboard.js](https://github.com/hashlib/chessboardjs/) (Own fork) - Client side chess board
 * [Celery](https://github.com/celery/celery) - Used to run different tasks on server side
 * [Flask](https://github.com/pallets/flask) - Main server side framework
 * There are also different add-ons for Flask (Flask-Login, Flask-SQLAlchemy, etc...)
