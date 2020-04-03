@@ -238,6 +238,7 @@
 
 	function onGameEnded(data) {
     removeTimer('first-move-timer')
+    removeTimer('opp-disconnected-timer')
 
 		result = data.result
     reason = data.reason
