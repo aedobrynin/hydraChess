@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Dict
+from math import ceil, floor
 import chess
 from celery.task.control import revoke
 from flask_socketio import close_room
@@ -33,14 +34,14 @@ def start_game(game_id: int) -> None:
              {"fen": game.fen,
               "color": "w",
               "opp_nickname": game.user_black_pieces.login,
-              "opp_rating": int(game.user_black_pieces.rating),
+              "opp_rating": game.user_black_pieces.rating,
               "rating_changes": rating_changes["w"].to_dict()},
              room=game.user_white_pieces.sid)
     sio.emit('game_started',
              {"fen": game.fen,
               "color": "b",
               "opp_nickname": game.user_white_pieces.login,
-              "opp_rating": int(game.user_white_pieces.rating),
+              "opp_rating": game.user_white_pieces.rating,
               "rating_changes": rating_changes["b"].to_dict()},
              room=game.user_black_pieces.sid)
 
@@ -138,7 +139,7 @@ def on_reconnect(user_id: int, game_id: int) -> None:
                  {'fen': game.fen,
                   "color": "w",
                   "opp_nickname": game.user_black_pieces.login,
-                  "opp_rating": int(game.user_black_pieces.rating),
+                  "opp_rating": game.user_black_pieces.rating,
                   "rating_changes": rating_changes["w"].to_dict()},
                  room=sid)
         sio.emit('opp_reconnected',
@@ -148,7 +149,7 @@ def on_reconnect(user_id: int, game_id: int) -> None:
                  {'fen': game.fen,
                   "color": "b",
                   "opp_nickname": game.user_white_pieces.login,
-                  "opp_rating": int(game.user_white_pieces.rating),
+                  "opp_rating": game.user_white_pieces.rating,
                   "rating_changes": rating_changes["b"].to_dict()},
                  room=sid)
         sio.emit('opp_reconnected',
@@ -182,7 +183,7 @@ def on_connect(user_id: int) -> None:
 
     sio.emit('set_data',
              {'nickname': user.login,
-              'rating': int(user.rating)},
+              'rating': user.rating},
              room=user.sid)
 
     if user.cur_game_id:
@@ -349,17 +350,13 @@ class RatingChange:
     @staticmethod
     def from_formula(k: int, e: float):
         '''Build up RatingChange object from ELO rating system formula'''
-        win = k * (1 - e)
-        draw = k * (0.5 - e)
-        lose = k * (-e)
+        win = ceil(k * (1 - e))
+        draw = floor(k * (0.5 - e))
+        lose = floor(k * (-e))
         return RatingChange(win, draw, lose)
 
-    def to_dict(self, to_int=True):
+    def to_dict(self):
         '''Get rating changes in dict'''
-        if to_int:
-            return {"win": int(self.win),
-                    "draw": int(self.draw),
-                    "lose": int(self.lose)}
         return {"win": self.win,
                 "draw": self.draw,
                 "lose": self.lose}
