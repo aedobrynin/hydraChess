@@ -18,11 +18,12 @@ CELERY_ROUTES = {
     'on_reconnect': {'queue': 'high'},
     'update_rating': {'queue': 'high'},
     # -- NORMAL PRIORITY QUEUE -- #
-    'send_message': {'queue': 'normal'},
     'on_first_move_timed_out': {'queue': 'normal'},
     'on_disconnect_timed_out': {'queue': 'normal'},
+    'on_time_is_up': {'queue': 'normal'},
     'on_connect': {'queue': 'normal'},
-    'on_disconnect': {'queue': 'normal'},
     # -- LOW PRIORITY QUEUE -- #
+    'send_message': {'queue': 'normal'},
     'update_k_factor': {'queue': 'low'},
+    'on_disconnect': {'queue': 'low'},
 }

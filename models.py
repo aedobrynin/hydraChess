@@ -1,7 +1,9 @@
+import re
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy_serializer import SerializerMixin
 from flask_login import UserMixin
+from sqlalchemy.dialects.sqlite import DATETIME
 
 
 db = SQLAlchemy()
@@ -29,11 +31,11 @@ class User(db.Model, UserMixin, SerializerMixin):
 
     k_factor = db.Column(db.Integer, default=40)
 
-    cur_game_id = db.Column(db.Integer, default=None)
+    cur_game_id = db.Column(db.Integer, db.ForeignKey('games.id'))
 
     in_search = db.Column(db.Boolean, default=False)
 
-    sid = db.Column(db.String, nullable=True, default=None)
+    sid = db.Column(db.String, nullable=True)
 
     def set_password(self, password: str) -> None:
         self.hashed_password = generate_password_hash(password)
@@ -51,24 +53,32 @@ class Game(db.Model, SerializerMixin):
                    unique=True,
                    nullable=False)
 
-    user_white_pieces_id = db.Column(db.Integer,
-                                     db.ForeignKey('users.id'))
-    user_black_pieces_id = db.Column(db.Integer,
-                                     db.ForeignKey('users.id'))
+    white_user_id = db.Column(db.Integer,
+                              db.ForeignKey('users.id'))
+    black_user_id = db.Column(db.Integer,
+                              db.ForeignKey('users.id'))
 
-    user_white_pieces = db.relationship('User',
-                                        primaryjoin="User.id == \
-                                        Game.user_white_pieces_id")
-    user_black_pieces = db.relationship('User',
-                                        primaryjoin="User.id == \
-                                        Game.user_black_pieces_id")
+    white_user = db.relationship('User',
+                                 primaryjoin="User.id == \
+                                              Game.white_user_id")
+    black_user = db.relationship('User',
+                                 primaryjoin="User.id == \
+                                              Game.black_user_id")
 
-    fen = db.Column(db.String, default=None)
+    fen = db.Column(db.String)
 
     is_started = db.Column(db.Boolean,
                            default=0)
     is_finished = db.Column(db.Boolean,
                             default=0)
+
+    white_clock = db.Column(db.Interval())
+    black_clock = db.Column(db.Interval())
+
+    last_move_datetime = \
+        db.Column(DATETIME(storage_format="%(year)04d/%(month)02d/%(day)02d "
+                                          "%(hour)02d:%(minute)02d:%(second)02d",
+                           regexp=re.compile(r"(\d+)/(\d+)/(\d+) (\d+):(\d+):(\d+)")))
 
     result = db.Column(db.String)
 
@@ -86,6 +96,19 @@ class CeleryTask(db.Model):
     id = db.Column(db.Integer, primary_key=True, unique=True)
     type_id = db.Column(db.Integer, db.ForeignKey('celery_task_types.id'),
                         primary_key=True)
-    game_id = db.Column(db.Integer, db.ForeignKey('games.id'), default=None)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), default=None)
-    eta = db.Column(db.DateTime, default=None)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    eta = db.Column(DATETIME(storage_format="%(year)04d/%(month)02d/%(day)02d "
+                                            "%(hour)02d:%(minute)02d:%(second)02d",
+                             regexp=re.compile(r"(\d+)/(\d+)/(\d+) "
+                                               r"(\d+):(\d+):(\d+)")))
+
+
+class GameRequest(db.Model):
+    __tablename__ = "game_requests"
+
+    id = db.Column(db.Integer, primary_key=True, unique=True)
+
+    time = db.Column(db.Interval)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    user = db.relationship('User')

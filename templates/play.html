@@ -13,28 +13,55 @@
 <body>
   <div class="container">
     <div class="row">
-      <div id="left_column" class="flex-column mb-3 col-11 order-second col-sm-12 col-md-12 col-lg-4 order-lg-first col-xl-4 order-xl-first center-block">
-        <div class="flex-column flex-grow-1 p-1 pb-2 rounded" style="background-color: #444b52;">
-          <div id="messages_box" class="m-2" style="overflow-y: auto; color: white; word-wrap: break-word"></div>
-          <div id="message_input_box" class="mt-auto">
-            <form onsubmit="sendMessage(); return false;">
-              <input id="message_input" class="form-control" type="text" placeholder="type a message" maxlength="70" readonly></input>
-            </form>
+      <div id="left_column" class="flex-column flex-grow-1
+                                   pb-2 p-0 mb-3 rounded center-block
+                                   center-block
+                                   col-11 order-second
+                                   col-sm-12 col-md-12
+                                   col-lg-4 order-lg-first
+                                   col-xl-4 order-xl-first">
+        <div id="game_params" class="bg-dark rounded-top">
+          <form class="pt-2 pb-2 px-1" onsubmit="searchGame(); return false;">
+            <select class="form-control" id="game_time">
+              <option value="1">1 minute</option>
+              <option value="3">3 minutes</option>
+              <option value="5">5 minutes</option>
+              <option value="10">10 minutes</option>
+            </select>
+            <button type="submit" id="find_game_btn" class="btn mt-2 w-100">
+              Find game
+            </button>
+          </form>
+        </div>
+        <div id="messages_box" class="m-2"></div>
+        <div id="message_input_box" class="mt-auto px-1">
+          <form onsubmit="sendMessage(); return false;">
+            <input id="message_input" class="form-control" type="text"
+                   placeholder="type a message" maxlength="70" readonly></input>
+          </form>
+        </div>
+      </div>
+      <div id="right_column" class="flex-column center-block
+                                    col-11 order-first
+                                    col-sm-12 order-sm-first
+                                    col-md-12 order-md-first
+                                    col-lg-8 col-xl-8">
+        <div class="row p-0 mx-0 mb-1 player-info">
+          <div id="opp_nickname" class="flex-column flex-shrink-1 my-auto">
+            Opponent
+          </div>
+          <div id="opp_rating" class="flex-column flex-grow-1 my-auto pl-1"></div>
+          <div id="opp_clock" class="flex-column flex-shrink-1 clock float-right">
+            <span class="min">00</span>:<span class="sec">00</span>
           </div>
         </div>
-        <button id="find_game_btn" class="btn mt-1 w-100" style="background-color: #444b52; color: white; font-weight:bold" onclick="searchGame()">
-          Find game
-        </button>
-      </div>
-      <div id="right_column" class="flex-column col-11 order-first col-sm-12 order-sm-first col-md-12 order-md-first col-lg-8 col-xl-8 center-block">
-        <div class="col p-0 mb-1" style="font-weight: bolder; color: white;">
-          <a id="opp_nickname">Opponent</a>
-          <a class="pl-1" id="opp_rating"></a>
-        </div>
         <div id="main_board" class="w-100"></div>
-        <div class="col p-0 mt-2 mb-3" style="font-weight: bolder; color: white;">
-          <a id="own_nickname"></a>
-          <a class="pl-1" id="own_rating"></a>
+        <div class="row p-0 mx-0 mt-1 player-info">
+          <div id="own_nickname" class="flex-column flex-shrink-1 my-auto"></div>
+          <div id="own_rating" class="flex-column flex-grow-1 my-auto pl-1"></div>
+          <div id="own_clock" class="flex-column flex-shrink-1 clock float-right">
+            <span class="min">00</span>:<span class="sec">00</span>
+          </div>
         </div>
       </div>
     </div>
@@ -45,9 +72,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"
           integrity="sha256-eqQw3yuTEYSQQIUa3vMMTeSfbIzv24BkWkJi8flcRF8="
           crossorigin="anonymous"></script>
-  <!-- <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
-          integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD"
-          crossorigin="anonymous"></script> -->
   <script src="{{ url_for('static', filename='js/chessboard.js') }}"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"
           integrity="sha256-bQmrZe4yPnQrLTY+1gYylfNMBuGfnT/HKsCGX+9Xuqo="
