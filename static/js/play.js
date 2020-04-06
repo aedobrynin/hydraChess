@@ -164,16 +164,16 @@
       setTimeout(updateClocks, 1000)
     }
 
-
     rating_changes = data.rating_changes
     opp_nickname = data.opp_nickname
     opp_rating = data.opp_rating
     document.getElementById("opp_nickname").innerHTML = opp_nickname
     document.getElementById("opp_rating").innerHTML = `(${opp_rating})`
 
-    $('#find_game_btn').prop('disabled', true)
     $('#message_input').prop('readonly', false)
 
+    $('#search_game_form').addClass('d-none')
+    $('#game_state_buttons').removeClass('d-none')
 
     notification = `<div class="notification">
                       <div class="notification-game-state">NEW GAME</div>
@@ -317,6 +317,13 @@
  }
 
   function onGameEnded(data) {
+    $('#find_game_btn').prop('disabled', false)
+    $('#game_time').prop('disabled', false)
+    $('#message_input').prop('readonly', true)
+
+    $('#search_game_form').removeClass('d-none')
+    $('#game_state_buttons').addClass('d-none')
+
     removeTimer('first-move-timer')
     removeTimer('opp-disconnected-timer')
 
@@ -343,9 +350,6 @@
     if (rating_delta) {
       updateRating()
     }
-
-    $('#find_game_btn').prop('disabled', false)
-    $('#message_input').prop('readonly', true)
 
     notification = `<div class="notification">
                       <div class="notification-game-state">GAME ${result.toUpperCase()}</div>
@@ -375,6 +379,7 @@
     minutes = parseInt($('#game_time').val())
     sio.emit('search', {'minutes': minutes})
     $('#find_game_btn').prop('disabled', true)
+    $('#game_time').prop('disabled', true)
   }
 
 

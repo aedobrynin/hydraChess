@@ -20,8 +20,9 @@
                                    col-sm-12 col-md-12
                                    col-lg-4 order-lg-first
                                    col-xl-4 order-xl-first">
-        <div id="game_params" class="bg-dark rounded-top">
-          <form class="pt-2 pb-2 px-1" onsubmit="searchGame(); return false;">
+        <div id="up_container" class="rounded-top">
+          <form id="search_game_form" class="pt-2 pb-2 px-1"
+                onsubmit="searchGame(); return false;">
             <select class="form-control" id="game_time">
               <option value="1">1 minute</option>
               <option value="3">3 minutes</option>
@@ -32,6 +33,10 @@
               Find game
             </button>
           </form>
+          <div id="game_state_buttons" class="pt-2 pb-2 px-1 d-none">
+            <button id="draw_btn" class="btn w-100">Offer a draw</button>
+            <button id="resign_btn" class="btn mt-2 w-100">Resign</button>
+         </div>
         </div>
         <div id="messages_box" class="m-2"></div>
         <div id="message_input_box" class="mt-auto px-1">

@@ -194,10 +194,12 @@ def on_reconnect(user_id: int, game_id: int) -> None:
     black_clock = game.black_clock
     white_clock = game.white_clock
 
-    if chess.Board(game.fen).turn == chess.WHITE:
-        white_clock -= datetime.utcnow() - game.last_move_datetime
-    else:
-        black_clock -= datetime.utcnow() - game.last_move_datetime
+
+    if game.last_move_datetime:
+        if chess.Board(game.fen).turn == chess.WHITE:
+            white_clock -= datetime.utcnow() - game.last_move_datetime
+        else:
+            black_clock -= datetime.utcnow() - game.last_move_datetime
 
     if user_id == game.white_user_id:
         sio.emit('game_started',
