@@ -7,8 +7,9 @@ from flask_socketio import SocketIO, join_room, disconnect, leave_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 from flask_migrate import Migrate
-from models import db, User, Game, CeleryTask
+from models import db, User, Game, CeleryTask, GameRequest
 from forms import RegisterForm, LoginForm
+from datetime import timedelta
 
 
 app = Flask(__name__)
@@ -69,7 +70,9 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        return redirect('/sign_in')
+
+        login_user(user)
+        return redirect('/')
 
     return render_template('register.html', title='Register', form=form)
 
@@ -104,36 +107,60 @@ def search_game(*args, **kwargs):
         print("Already in search/in game")
         return
 
-    users_in_search = db.session.query(User).filter(User.in_search == 1).all()
-    users_in_search.sort(key=lambda x: abs(current_user.rating - x.rating))
+    if not(args and isinstance(args[0], dict)):
+        print("Bad arguments")
+        return
+    minutes = args[0].get('minutes', None)
+    if isinstance(minutes, int) is False or minutes not in [1, 3, 5, 10]:
+        print("Bad arguments")
+        return
 
-    if users_in_search and\
-       abs(current_user.rating - users_in_search[0].rating) <= 200:
-        user_to_play_with = users_in_search[0]
+    game_time = timedelta(minutes=minutes)
 
-        game = Game(user_white_pieces_id=current_user.id,
-                    user_black_pieces_id=user_to_play_with.id,
-                    is_started=0)
+    game_requests = db.session.query(GameRequest).\
+        filter(GameRequest.time == game_time).all()
 
-        db.session.add(game)
-        db.session.commit()
+    added_to_existed = False
+    if game_requests:
+        accepted_request = \
+            min(game_requests,
+                key=lambda x: abs(current_user.rating - x.user.rating))
+        if abs(current_user.rating - accepted_request.user.rating) <= 200:
+            added_to_existed = True
 
-        current_user.cur_game_id = game.id
-        user_to_play_with.cur_game_id = game.id
+            db.session.delete(accepted_request)
+            user_to_play_with = accepted_request.user
 
-        user_to_play_with.in_search = False
+            game = Game(white_user_id=current_user.id,
+                        black_user_id=user_to_play_with.id,
+                        white_clock=game_time,
+                        black_clock=game_time,
+                        is_started=0)
 
-        join_room(game.id, sid=current_user.sid)
-        join_room(game.id, sid=user_to_play_with.sid)
+            db.session.add(game)
+            db.session.commit()
 
-        db.session.merge(current_user)
-        db.session.merge(user_to_play_with)
-        db.session.commit()
+            current_user.cur_game_id = game.id
+            user_to_play_with.cur_game_id = game.id
 
-        game_management.start_game.delay(game.id)
-    else:
+            user_to_play_with.in_search = False
+
+            join_room(game.id, sid=current_user.sid)
+            join_room(game.id, sid=user_to_play_with.sid)
+
+            db.session.merge(current_user)
+            db.session.merge(user_to_play_with)
+            db.session.commit()
+
+            game_management.start_game.delay(game.id)
+
+    if added_to_existed is False:
         current_user.in_search = True
         db.session.merge(current_user)
+
+        game_request = GameRequest(time=game_time,
+                                   user_id=current_user.id)
+        db.session.add(game_request)
         db.session.commit()
 
 
@@ -174,6 +201,9 @@ def on_disconnect(*args, **kwargs) -> None:
     if current_user.in_search:
         current_user.in_search = False
 
+        for game_request in db.session.query(GameRequest).\
+                filter(GameRequest.user_id == current_user.id):
+            db.session.delete(game_request)
     db.session.merge(current_user)
     db.session.commit()
 

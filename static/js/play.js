@@ -19,13 +19,13 @@
     width = $(window).width()
 
     if (width >= 1200) {
-      $('#messages_box').css({'height': '692px',
-        'max-height': '692px'})
+      $('#messages_box').css({'height': '630px',
+        'max-height': '630px'})
     }
     else if (width >= 992)
     {
-      $('#messages_box').css({'height': '572px',
-        'max-height': '572px'})
+      $('#messages_box').css({'height': '510px',
+        'max-height': '510px'})
     }
     else
     {
@@ -93,7 +93,6 @@
   function highlightChecked() {
     piece = {type: 'k', color: game.turn()}
     pos = getPosByPiece(piece)[0]
-    console.log(pos)
 
     $board.find('.square-' + pos).addClass('highlight-check')
   }
@@ -146,6 +145,8 @@
 
 
   function onGameStarted(data) {
+    setClocks(data.opp_clock, data.own_clock)
+
     removeHighlights()
 
     game = new Chess(data.fen)
@@ -157,15 +158,21 @@
     else
       board.orientation('black')
 
+    // If game is started, start clocks
+    if (!(getFullmoveNumber() == 1 && game.turn() == 'w')) {
+      setTimeout(updateClocks, 1000)
+    }
+
     rating_changes = data.rating_changes
     opp_nickname = data.opp_nickname
     opp_rating = data.opp_rating
     document.getElementById("opp_nickname").innerHTML = opp_nickname
     document.getElementById("opp_rating").innerHTML = `(${opp_rating})`
 
-    $('#find_game_btn').prop('disabled', true)
     $('#message_input').prop('readonly', false)
 
+    $('#search_game_form').addClass('d-none')
+    $('#game_state_buttons').removeClass('d-none')
 
     notification = `<div class="notification">
                       <div class="notification-game-state">NEW GAME</div>
@@ -224,8 +231,77 @@
     $("#" + timerId).parent().remove()
   }
 
+
+  // adds leading zero to value, if it's less than 10
+  function addLeadingZero(value) {
+    if (value < 10) return "0" + value
+    return value.toString()
+  }
+
+
+
+  function setClocks(oppClock, ownClock) {
+    if (oppClock) {
+      oppClock.min = addLeadingZero(oppClock.min)
+      oppClock.sec = addLeadingZero(oppClock.sec)
+
+      $oppClock = $("#opp_clock")
+      $oppClock.find('.min').html(oppClock.min)
+      $oppClock.find('.sec').html(oppClock.sec)
+    }
+
+    if (ownClock) {
+      ownClock.min = addLeadingZero(ownClock.min)
+      ownClock.sec = addLeadingZero(ownClock.sec)
+
+      $ownClock = $("#own_clock")
+      $ownClock.find(".min").html(ownClock.min)
+      $ownClock.find(".sec").html(ownClock.sec)
+    }
+  }
+
+  function updateClock(user) {
+    $clock = $(`#${user}_clock`)
+    $min = $clock.find('.min')
+    $sec = $clock.find('.sec')
+
+    min = parseInt($min.html())
+    sec = parseInt($sec.html())
+    if (sec > 0) {
+      sec -= 1
+      $sec.html(addLeadingZero(sec))
+    }
+    else if (min > 0)
+    {
+      min -= 1
+      $min.html(addLeadingZero(min))
+      $sec.html("59")
+    }
+  }
+
+  function updateClocks() {
+    if (game == null) return
+
+    if (color == game.turn())
+    {
+      updateClock('own')
+    }
+    else
+    {
+      updateClock('opp')
+    }
+    setTimeout(updateClocks, 1000)
+  }
+
+
   function onGameUpdated(data) {
+    setClocks(data.opp_clock, data.own_clock)
+
     move = game.move(data.san)
+
+    if (getFullmoveNumber() == 1) {
+      setTimeout(updateClocks, 1000)
+    }
 
     removeHighlights()
     addHighlights(move.from, move.to)
@@ -234,14 +310,31 @@
     }
 
     board.position(game.fen())
-  }
+ }
 
   function onGameEnded(data) {
+    $('#find_game_btn').prop('disabled', false)
+    $('#game_time').prop('disabled', false)
+    $('#message_input').prop('readonly', true)
+
+    $('#search_game_form').removeClass('d-none')
+    $('#game_state_buttons').addClass('d-none')
+
     removeTimer('first-move-timer')
     removeTimer('opp-disconnected-timer')
 
     result = data.result
     reason = data.reason
+
+    if (reason == "Your time is up")
+    {
+      setClocks(undefined, {min: 0, sec: 0})
+    }
+    else if (reason == "Opponent's time is up")
+    {
+      setClocks({min: 0, sec: 0})
+    }
+
     rating_delta = null
     if (result == 'won') rating_delta = rating_changes.win
     else if (result == 'draw') rating_delta = rating_changes.draw
@@ -253,9 +346,6 @@
     if (rating_delta) {
       updateRating()
     }
-
-    $('#find_game_btn').prop('disabled', false)
-    $('#message_input').prop('readonly', true)
 
     notification = `<div class="notification">
                       <div class="notification-game-state">GAME ${result.toUpperCase()}</div>
@@ -282,8 +372,10 @@
   }
 
   function searchGame() {
-    sio.emit('search')
+    minutes = parseInt($('#game_time').val())
+    sio.emit('search', {'minutes': minutes})
     $('#find_game_btn').prop('disabled', true)
+    $('#game_time').prop('disabled', true)
   }
 
 

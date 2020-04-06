@@ -11,9 +11,22 @@ from models import db, Game, User, CeleryTask
 
 ON_FIRST_MOVE_TIMED_OUT = 0
 ON_DISCONNECT_TIMED_OUT = 1
+ON_TIME_IS_UP = 2
+
+FIRST_MOVE_TIME_OUT = 15
+DISCONNECT_TIME_OUT = 60
+
 USER_ACCEPTABLE = (ON_FIRST_MOVE_TIMED_OUT, ON_DISCONNECT_TIMED_OUT)
 
 celery = make_celery(app)
+
+
+def timedelta_to_dict(tdelta: timedelta) -> Dict[str, int]:
+    """Returns {"min": minutes, "sec": seconds}
+       extracted from timedelta obj"""
+    minutes = tdelta.seconds // 60
+    seconds = tdelta.seconds % 60
+    return {"min": minutes, "sec": seconds}
 
 
 @celery.task(name='start_game', ignore_result=True)
@@ -33,28 +46,34 @@ def start_game(game_id: int) -> None:
     sio.emit('game_started',
              {"fen": game.fen,
               "color": "w",
-              "opp_nickname": game.user_black_pieces.login,
-              "opp_rating": game.user_black_pieces.rating,
+              "opp_nickname": game.black_user.login,
+              "opp_rating": game.black_user.rating,
+              "opp_clock": timedelta_to_dict(game.black_clock),
+              "own_clock": timedelta_to_dict(game.white_clock),
               "rating_changes": rating_changes["w"].to_dict()},
-             room=game.user_white_pieces.sid)
+             room=game.white_user.sid)
     sio.emit('game_started',
              {"fen": game.fen,
               "color": "b",
-              "opp_nickname": game.user_white_pieces.login,
-              "opp_rating": game.user_white_pieces.rating,
+              "opp_nickname": game.white_user.login,
+              "opp_rating": game.white_user.rating,
+              "opp_clock": timedelta_to_dict(game.white_clock),
+              "own_clock": timedelta_to_dict(game.black_clock),
               "rating_changes": rating_changes["b"].to_dict()},
-             room=game.user_black_pieces.sid)
+             room=game.black_user.sid)
 
     sio.emit('first_move_waiting',
              {'wait_time': 15},
-             room=game.user_white_pieces.sid)
+             room=game.white_user.sid)
 
-    task = on_first_move_timed_out.apply_async(args=(game_id, ), countdown=16)
+    task = on_first_move_timed_out.apply_async(args=(game_id, ),
+                                               countdown=FIRST_MOVE_TIME_OUT)
     celery_task = CeleryTask(id=task.id,
                              type_id=ON_FIRST_MOVE_TIMED_OUT,
                              game_id=game_id,
-                             user_id=game.user_white_pieces_id,
-                             eta=datetime.now() + timedelta(seconds=16))
+                             user_id=game.white_user_id,
+                             eta=datetime.utcnow() +
+                             timedelta(seconds=FIRST_MOVE_TIME_OUT))
 
     db.session.add(celery_task)
     db.session.commit()
@@ -67,16 +86,18 @@ def update_game(game_id: int, user_id: int, move_san: str = "",
        Calls end_game(...) if the game is ended.'''
     # TODO: draw offer and surrender support
 
+    request_datetime = datetime.utcnow()
+
     game = db.session.query(Game).get(game_id)
 
     if game.is_finished:
         return
 
     board = chess.Board(game.fen)
-    user_white = game.user_white_pieces_id == user_id
+    white_user = game.white_user_id == user_id
 
-    if (user_white and board.turn == chess.BLACK) or\
-       (not user_white and board.turn == chess.WHITE):
+    if (white_user and board.turn == chess.BLACK) or\
+       (not white_user and board.turn == chess.WHITE):
         print("Wrong move side.")
         return
 
@@ -85,36 +106,79 @@ def update_game(game_id: int, user_id: int, move_san: str = "",
             board.push_san(move_san)
             game.fen = board.fen()
 
-            task = db.session.query(CeleryTask).\
+            tasks_to_revoke = db.session.query(CeleryTask).\
                 filter(CeleryTask.game_id == game_id).\
-                filter(CeleryTask.type_id == ON_FIRST_MOVE_TIMED_OUT).first()
-            if task is not None:
+                filter(CeleryTask.type_id.in_((ON_FIRST_MOVE_TIMED_OUT,
+                                               ON_TIME_IS_UP)))
+            for task in tasks_to_revoke:
                 revoke(task.id)
                 db.session.delete(task)
+
+            if white_user:
+                game.white_clock -= request_datetime - \
+                        (game.last_move_datetime or request_datetime)
+
+                task = on_time_is_up.apply_async(args=(game.black_user_id,
+                                                       game_id),
+                                                 eta=datetime.utcnow() +
+                                                 game.black_clock)
+                celery_task = CeleryTask(id=task.id,
+                                         type_id=ON_TIME_IS_UP,
+                                         game_id=game_id,
+                                         user_id=game.black_user_id,
+                                         eta=datetime.utcnow() +
+                                         game.black_clock)
+                db.session.add(celery_task)
+            else:
+                game.black_clock -= request_datetime - \
+                        (game.last_move_datetime or request_datetime)
+
+                task = on_time_is_up.apply_async(args=(game.white_user_id,
+                                                       game_id),
+                                                 eta=datetime.utcnow() +
+                                                 game.white_clock)
+                celery_task = CeleryTask(id=task.id,
+                                         type_id=ON_TIME_IS_UP,
+                                         game_id=game_id,
+                                         user_id=game.black_user_id,
+                                         eta=datetime.utcnow() +
+                                         game.white_clock)
+                db.session.add(celery_task)
+
+            game.last_move_datetime = request_datetime
 
             if board.fullmove_number == 1:  # and board.turn == chess.BLACK
                 sio.emit('first_move_waiting',
                          {'wait_time': 15},
-                         room=game.user_black_pieces.sid)
+                         room=game.black_user.sid)
 
-                task = on_first_move_timed_out.apply_async((game_id, ),
-                                                           countdown=16)
+                task = on_first_move_timed_out.\
+                    apply_async((game_id, ), countdown=FIRST_MOVE_TIME_OUT)
 
                 celery_task = CeleryTask(id=task.id,
                                          type_id=ON_FIRST_MOVE_TIMED_OUT,
                                          game_id=game_id,
-                                         user_id=game.user_black_pieces_id,
-                                         eta=datetime.now() +
-                                         timedelta(seconds=16))
+                                         user_id=game.black_user_id,
+                                         eta=datetime.utcnow() +
+                                         timedelta(
+                                             seconds=FIRST_MOVE_TIME_OUT))
                 db.session.add(celery_task)
 
             db.session.merge(game)
             db.session.commit()
 
-            result = board.result()
             sio.emit('game_updated',
-                     {"san": move_san},
-                     room=game_id)
+                     {"san": move_san,
+                      "opp_clock": timedelta_to_dict(game.black_clock),
+                      "own_clock": timedelta_to_dict(game.white_clock)},
+                     room=game.white_user.sid)
+            sio.emit('game_updated',
+                     {"san": move_san,
+                      "opp_clock": timedelta_to_dict(game.white_clock),
+                      "own_clock": timedelta_to_dict(game.black_clock)},
+                     room=game.black_user.sid)
+
+            result = board.result()
             if result != '*':
                 end_game.delay(game_id, result)
         except ValueError:
@@ -134,26 +198,39 @@ def on_reconnect(user_id: int, game_id: int) -> None:
 
     sid = db.session.query(User).get(user_id).sid
 
-    if user_id == game.user_white_pieces_id:
+    black_clock = game.black_clock
+    white_clock = game.white_clock
+
+    if game.last_move_datetime:
+        if chess.Board(game.fen).turn == chess.WHITE:
+            white_clock -= datetime.utcnow() - game.last_move_datetime
+        else:
+            black_clock -= datetime.utcnow() - game.last_move_datetime
+
+    if user_id == game.white_user_id:
         sio.emit('game_started',
                  {'fen': game.fen,
                   "color": "w",
-                  "opp_nickname": game.user_black_pieces.login,
-                  "opp_rating": game.user_black_pieces.rating,
+                  "opp_nickname": game.black_user.login,
+                  "opp_rating": game.black_user.rating,
+                  "opp_clock": timedelta_to_dict(black_clock),
+                  "own_clock": timedelta_to_dict(white_clock),
                   "rating_changes": rating_changes["w"].to_dict()},
                  room=sid)
         sio.emit('opp_reconnected',
-                 room=game.user_black_pieces.sid)
+                 room=game.black_user.sid)
     else:
         sio.emit('game_started',
                  {'fen': game.fen,
                   "color": "b",
-                  "opp_nickname": game.user_white_pieces.login,
-                  "opp_rating": game.user_white_pieces.rating,
+                  "opp_nickname": game.white_user.login,
+                  "opp_rating": game.white_user.rating,
+                  "opp_clock": timedelta_to_dict(white_clock),
+                  "own_clock": timedelta_to_dict(black_clock),
                   "rating_changes": rating_changes["b"].to_dict()},
                  room=sid)
         sio.emit('opp_reconnected',
-                 room=game.user_white_pieces.sid)
+                 room=game.white_user.sid)
 
     celery_tasks = db.session.query(CeleryTask).\
         filter(CeleryTask.game_id == game_id).\
@@ -162,13 +239,13 @@ def on_reconnect(user_id: int, game_id: int) -> None:
     for task in celery_tasks:
         if task.type_id == ON_FIRST_MOVE_TIMED_OUT and\
            task.user_id == user_id:
-            wait_time = (task.eta - datetime.now()).seconds
+            wait_time = (task.eta - datetime.utcnow()).seconds
             sio.emit('first_move_waiting',
                      {'wait_time': wait_time},
                      room=sid)
         elif task.type_id == ON_DISCONNECT_TIMED_OUT and\
                 task.user_id != user_id:
-            wait_time = (task.eta - datetime.now()).seconds
+            wait_time = (task.eta - datetime.utcnow()).seconds
             sio.emit('opp_disconnected',
                      {'wait_time': wait_time},
                      room=sid)
@@ -204,22 +281,23 @@ def on_disconnect(user_id: int, game_id: int) -> None:
     '''Schedules on_disconnect_timed_out_task, adds it to database.
        Emits 'opp_disconnected' to the opponent'''
     task = on_disconnect_timed_out.apply_async(args=(user_id, game_id),
-                                               countdown=60)
+                                               countdown=DISCONNECT_TIME_OUT)
     celery_task = CeleryTask(id=task.id,
                              type_id=ON_DISCONNECT_TIMED_OUT,
                              game_id=game_id,
                              user_id=user_id,
-                             eta=datetime.now() + timedelta(seconds=60))
+                             eta=datetime.utcnow() +
+                             timedelta(seconds=DISCONNECT_TIME_OUT))
 
     game = db.session.query(Game).get(game_id)
     opp_sid: int
-    if user_id == game.user_white_pieces_id:
-        opp_sid = game.user_black_pieces.sid
+    if user_id == game.white_user_id:
+        opp_sid = game.black_user.sid
     else:
-        opp_sid = game.user_white_pieces.sid
+        opp_sid = game.white_user.sid
 
     sio.emit('opp_disconnected',
-             {'wait_time': 60},
+             {'wait_time': DISCONNECT_TIME_OUT},
              room=opp_sid)
 
     db.session.add(celery_task)
@@ -252,19 +330,19 @@ def end_game(game_id: int, result: str,
     sio.emit('game_ended',
              {'result': result_white,
               'reason': reason_white},
-             room=game.user_white_pieces.sid)
+             room=game.white_user.sid)
     sio.emit('game_ended',
              {'result': result_black,
               'reason': reason_black},
-             room=game.user_black_pieces.sid)
+             room=game.black_user.sid)
 
     close_room(game_id, namespace='/')
 
     game.is_finished = 1
     game.result = result
 
-    game.user_white_pieces.cur_game_id = None
-    game.user_black_pieces.cur_game_id = None
+    game.white_user.cur_game_id = None
+    game.black_user.cur_game_id = None
 
     db.session.merge(game)
     db.session.commit()
@@ -274,31 +352,31 @@ def end_game(game_id: int, result: str,
 
     rating_changes = get_rating_changes(game_id)
 
-    game.user_white_pieces.games_played += 1
-    game.user_black_pieces.games_played += 1
+    game.white_user.games_played += 1
+    game.black_user.games_played += 1
 
-    db.session.merge(game.user_white_pieces)
-    db.session.merge(game.user_black_pieces)
+    db.session.merge(game.white_user)
+    db.session.merge(game.black_user)
     db.session.commit()
 
     if result == "1-0":
-        update_rating.delay(game.user_white_pieces_id,
+        update_rating.delay(game.white_user_id,
                             rating_changes["w"].win)
-        update_rating.delay(game.user_black_pieces_id,
+        update_rating.delay(game.black_user_id,
                             rating_changes["b"].lose)
     elif result == "1/2-1/2":
-        update_rating.delay(game.user_white_pieces_id,
+        update_rating.delay(game.white_user_id,
                             rating_changes["w"].draw)
-        update_rating.delay(game.user_black_pieces_id,
+        update_rating.delay(game.black_user_id,
                             rating_changes["b"].draw)
     elif result == "0-1":
-        update_rating.delay(game.user_white_pieces_id,
+        update_rating.delay(game.white_user_id,
                             rating_changes["w"].lose)
-        update_rating.delay(game.user_black_pieces_id,
+        update_rating.delay(game.black_user_id,
                             rating_changes["b"].win)
 
-    update_k_factor.delay(game.user_white_pieces_id)
-    update_k_factor.delay(game.user_black_pieces_id)
+    update_k_factor.delay(game.white_user_id)
+    update_k_factor.delay(game.black_user_id)
 
 
 @celery.task(name="send_message", ignore_result=True)
@@ -312,7 +390,7 @@ def send_message(game_id: int, sender: str, message: str):
 
 @celery.task(name="on_first_move_timed_out", ignore_result=True)
 def on_first_move_timed_out(game_id: int) -> None:
-    """Interrupts game because of too long first move waiting"""
+    """Interrupts game because of user didn't make first move for too long"""
     game = db.session.query(Game).get(game_id)
 
     board = chess.Board(game.fen)
@@ -328,14 +406,48 @@ def on_first_move_timed_out(game_id: int) -> None:
 
 @celery.task(name="on_disconnect_timed_out", ignore_results=True)
 def on_disconnect_timed_out(user_id: int, game_id: int) -> None:
+    """Interrupts game because of user being disconnected for too long"""
     game = db.session.query(Game).get(game_id)
 
     result = "1-0"
     reason_white = "Opponent was disconnected too long"
     reason_black = "You was disconnected too long"
-    if user_id == game.user_white_pieces_id:
+    if user_id == game.white_user_id:
         result = "0-1"
         reason_white, reason_black = reason_black, reason_white
+
+    end_game(game_id, result, reason_white, reason_black)
+
+
+@celery.task(name="on_time_is_up", ignore_results=True)
+def on_time_is_up(user_id: int, game_id: int) -> None:
+    """Interrupts game because of user's time is up"""
+    game = db.session.query(Game).get(game_id)
+
+    board = chess.Board(game.fen)
+
+    result: str
+    reason_white: str
+    reason_black: str
+    # Finish game with draw if other player has insufficient material to win
+    if (user_id == game.white_user_id and
+            board.has_insufficient_material(chess.BLACK) is True) or\
+       (user_id == game.black_user_id and
+            board.has_insufficient_material(chess.WHITE) is True):
+        result = "1/2-1/2"
+        reason_white = ("Opponent's time is up, "
+                        "but you have an insufficient material")
+        reason_black = ("Your time is up, "
+                        "but opponent has an insufficient material")
+        if user_id == game.white_user_id:
+            reason_white, reason_black = reason_black, reason_white
+    else:
+        result = "1-0"
+        reason_white = "Opponent's time is up"
+        reason_black = "Your time is up"
+        if user_id == game.white_user_id:
+            result = "0-1"
+            reason_white, reason_black = reason_black, reason_white
 
     end_game(game_id, result, reason_white, reason_black)
 
@@ -367,8 +479,8 @@ def get_rating_changes(game_id: int) -> Dict[str, RatingChange]:
        Example: {'w': RatingChange,
                  'b': RatingChange}'''
     game = db.session.query(Game).get(game_id)
-    r_white = game.user_white_pieces.rating
-    r_black = game.user_black_pieces.rating
+    r_white = game.white_user.rating
+    r_black = game.black_user.rating
 
     R_white = 10 ** (r_white / 400)
     R_black = 10 ** (r_black / 400)
@@ -378,8 +490,8 @@ def get_rating_changes(game_id: int) -> Dict[str, RatingChange]:
     E_white = R_white / R_sum
     E_black = R_black / R_sum
 
-    k_factor_white = game.user_white_pieces.k_factor
-    k_factor_black = game.user_black_pieces.k_factor
+    k_factor_white = game.white_user.k_factor
+    k_factor_black = game.black_user.k_factor
 
     rating_change_white = RatingChange.from_formula(k_factor_white, E_white)
     rating_change_black = RatingChange.from_formula(k_factor_black, E_black)
