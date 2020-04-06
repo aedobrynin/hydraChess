@@ -12,6 +12,10 @@ from models import db, Game, User, CeleryTask
 ON_FIRST_MOVE_TIMED_OUT = 0
 ON_DISCONNECT_TIMED_OUT = 1
 ON_TIME_IS_UP = 2
+
+FIRST_MOVE_TIME_OUT = 15
+DISCONNECT_TIME_OUT = 60
+
 USER_ACCEPTABLE = (ON_FIRST_MOVE_TIMED_OUT, ON_DISCONNECT_TIMED_OUT)
 
 celery = make_celery(app)
@@ -62,12 +66,14 @@ def start_game(game_id: int) -> None:
              {'wait_time': 15},
              room=game.white_user.sid)
 
-    task = on_first_move_timed_out.apply_async(args=(game_id, ), countdown=16)
+    task = on_first_move_timed_out.apply_async(args=(game_id, ),
+                                               countdown=FIRST_MOVE_TIME_OUT)
     celery_task = CeleryTask(id=task.id,
                              type_id=ON_FIRST_MOVE_TIMED_OUT,
                              game_id=game_id,
                              user_id=game.white_user_id,
-                             eta=datetime.utcnow() + timedelta(seconds=16))
+                             eta=datetime.utcnow() +
+                             timedelta(seconds=FIRST_MOVE_TIME_OUT))
 
     db.session.add(celery_task)
     db.session.commit()
@@ -146,15 +152,16 @@ def update_game(game_id: int, user_id: int, move_san: str = "",
                          {'wait_time': 15},
                          room=game.black_user.sid)
 
-                task = on_first_move_timed_out.apply_async((game_id, ),
-                                                           countdown=16)
+                task = on_first_move_timed_out.\
+                    apply_async((game_id, ), countdown=FIRST_MOVE_TIME_OUT)
 
                 celery_task = CeleryTask(id=task.id,
                                          type_id=ON_FIRST_MOVE_TIMED_OUT,
                                          game_id=game_id,
                                          user_id=game.black_user_id,
                                          eta=datetime.utcnow() +
-                                         timedelta(seconds=16))
+                                         timedelta(
+                                             seconds=FIRST_MOVE_TIME_OUT))
                 db.session.add(celery_task)
 
             db.session.merge(game)
@@ -274,12 +281,13 @@ def on_disconnect(user_id: int, game_id: int) -> None:
     '''Schedules on_disconnect_timed_out_task, adds it to database.
        Emits 'opp_disconnected' to the opponent'''
     task = on_disconnect_timed_out.apply_async(args=(user_id, game_id),
-                                               countdown=60)
+                                               countdown=DISCONNECT_TIME_OUT)
     celery_task = CeleryTask(id=task.id,
                              type_id=ON_DISCONNECT_TIMED_OUT,
                              game_id=game_id,
                              user_id=user_id,
-                             eta=datetime.utcnow() + timedelta(seconds=60))
+                             eta=datetime.utcnow() +
+                             timedelta(seconds=DISCONNECT_TIME_OUT))
 
     game = db.session.query(Game).get(game_id)
     opp_sid: int
@@ -289,7 +297,7 @@ def on_disconnect(user_id: int, game_id: int) -> None:
         opp_sid = game.white_user.sid
 
     sio.emit('opp_disconnected',
-             {'wait_time': 60},
+             {'wait_time': DISCONNECT_TIME_OUT},
              room=opp_sid)
 
     db.session.add(celery_task)
