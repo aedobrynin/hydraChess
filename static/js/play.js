@@ -93,7 +93,6 @@
   function highlightChecked() {
     piece = {type: 'k', color: game.turn()}
     pos = getPosByPiece(piece)[0]
-    console.log(pos)
 
     $board.find('.square-' + pos).addClass('highlight-check')
   }
@@ -311,9 +310,6 @@
     }
 
     board.position(game.fen())
-
-    console.log(data.opp_clock)
-    console.log(data.own_clock)
  }
 
   function onGameEnded(data) {
