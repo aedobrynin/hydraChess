@@ -111,7 +111,7 @@ def search_game(*args, **kwargs):
         print("Bad arguments")
         return
     minutes = args[0].get('minutes', None)
-    if isinstance(minutes, int) is False or minutes not in range(0, 60):
+    if isinstance(minutes, int) is False or minutes not in [1, 3, 5, 10]:
         print("Bad arguments")
         return
 
