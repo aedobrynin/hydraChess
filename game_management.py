@@ -106,13 +106,25 @@ def update_game(game_id: int, user_id: int, move_san: str = "",
             board.push_san(move_san)
             game.fen = board.fen()
 
-            tasks_to_revoke = db.session.query(CeleryTask).\
+            game_celery_tasks = db.session.query(CeleryTask).\
                 filter(CeleryTask.game_id == game_id).\
                 filter(CeleryTask.type_id.in_((ON_FIRST_MOVE_TIMED_OUT,
                                                ON_TIME_IS_UP)))
-            for task in tasks_to_revoke:
+            for task in game_celery_tasks.\
+                    filter(CeleryTask.type_id.in_((ON_FIRST_MOVE_TIMED_OUT,
+                                                   ON_TIME_IS_UP))):
                 revoke(task.id)
                 db.session.delete(task)
+
+            for task in game_celery_tasks.\
+                    filter(CeleryTask.user_id == user_id).\
+                    filter(CeleryTask.type_id == ON_DISCONNECT_TIMED_OUT):
+                revoke(task.id)
+                db.session.delete(task)
+
+                opp_sid = game.black_user.sid if white_user\
+                    else game.white_user.sid
+                sio.emit('opp_reconnected', room=opp_sid)
 
             if white_user:
                 game.white_clock -= request_datetime - \

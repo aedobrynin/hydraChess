@@ -71,6 +71,15 @@
       </div>
     </div>
   </div>
+  <audio id='game_started_sound'>
+    <source src="{{ url_for('static', filename='sounds/game_started.mp3') }}">
+  </audio>
+  <audio id='move_sound'>
+    <source src="{{ url_for('static', filename='sounds/move.mp3') }}">
+  </audio>
+  <audio id='game_ended_sound'>
+    <source src="{{ url_for('static', filename='sounds/game_ended.mp3') }}">
+  </audio>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
           integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
           crossorigin="anonymous"></script>
