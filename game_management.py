@@ -122,9 +122,9 @@ def update_game(game_id: int, user_id: int, move_san: str = "",
                 revoke(task.id)
                 db.session.delete(task)
 
-                opp_sid = game.black_user.sid if white_user else game.white_user.sid
+                opp_sid = game.black_user.sid if white_user\
+                    else game.white_user.sid
                 sio.emit('opp_reconnected', room=opp_sid)
-
 
             if white_user:
                 game.white_clock -= request_datetime - \
