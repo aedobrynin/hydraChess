@@ -331,7 +331,7 @@
       highlightChecked()
     }
 
-    if (game.turn() == color && game.game_over() == false) {// In order to do not do this twice
+    if (game.turn() == color && !game.game_over()) {// In order to do not do this twice
       playMoveSound()
     }
  }
