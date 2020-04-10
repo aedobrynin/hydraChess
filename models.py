@@ -6,7 +6,8 @@ from flask_login import UserMixin
 from sqlalchemy.dialects.sqlite import DATETIME
 
 
-db = SQLAlchemy()
+db = SQLAlchemy(session_options={"autoflush": False},
+                engine_options={'connect_args': {'timeout': 10}})
 
 
 class User(db.Model, UserMixin, SerializerMixin):
