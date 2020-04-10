@@ -3,65 +3,44 @@
 Hydra Chess is a Flask application to play chess online
 Tested on Python 3.7.5 and RabbitMQ 3.7.8
 
-![Image of interface](https://user-images.githubusercontent.com/43320720/78161668-7d7f7e80-744e-11ea-8441-d5428d6ba28e.png)
+![Interface](https://user-images.githubusercontent.com/43320720/78963701-efb42b00-7b00-11ea-9215-51bf4933e749.png)
 
-## Getting Started
+## Prerequisites
 
-The guide is written for Linux-based systems
-
-### Prerequisites
-
-* Create new python venv and install requirements.
+1. Create new python venv and install requirements.
 ```
 $ sudo apt install python3-venv python3-pip
 $ python3 -mvenv dev
 $ source dev/bin/activate
 $ pip3 install -r requirements.txt
 ```
+**(Your env must be in "dev" directory in order to run everything using scripts)**
 
-* Install rabbitmq-server
+2. Install rabbitmq-server
 ```
 $ sudo apt install rabbitmq-server
 ```
 
-* Create the database
+3. Create the database
 ```
 $ export FLASK_APP='main.py' && flask db upgrade
 ```
 
-### Running
+## Running
+**You can run everything using scripts if:**
+1. Your env is in "dev" directory
+2. You didn't changed root directory name (hydraChess) and scripts directory name (scripts).
 
-* Activate the venv
+If there is something different in your project, you can change scripts or [run everything manually](https://github.com/hashlib/hydraChess/blob/4098e3d8cb26400804a283a9bb4bc3910b3bb656/README.md#running).
 
-```
-$ source dev/bin/activate
-```
+**You have 2 possible ways to run everything using scripts:**
+1. Run it in 5 separate terminals using ```scripts/run_all_gnome_terminal.sh```
+2. Run it in one tmux window using ```scripts/run_all_tmux.sh``` (tmux must be installed)
 
-* Run the rabbitmq-server
-```
-$ sudo service rabbitmq-server start
-```
+In tmux everything looks like this:
+![tmux](https://user-images.githubusercontent.com/43320720/78963320-c5ae3900-7aff-11ea-9dfa-75837a342689.png)
 
-* Run the Celery workers
-```
-$ sudo celery -A game_management.celery worker -n worker.high -Q high -l=INFO
-```
-```
-$ sudo celery -A game_management.celery worker -n worker.normal -Q normal -l=INFO
-```
-```
-$ sudo celery -A game_management.celery worker -n worker.low -Q low -l=INFO
-```
 
-* (Optional) run the Celery Flower in order to monitor tasks status
-```
-$ sudo celery -A game_management.celery flower --loglevel=info
-```
-
-* Run main.py
-```
-$ python3 main.py
-```
 
 ## License
 
