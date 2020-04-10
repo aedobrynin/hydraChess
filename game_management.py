@@ -79,12 +79,10 @@ def start_game(game_id: int) -> None:
     db.session.commit()
 
 
-@celery.task(name='update_game', ignore_result=True)
-def update_game(game_id: int, user_id: int, move_san: str = "",
-                draw_offer: bool = False, surrender: bool = False) -> None:
-    '''Updates game state by user's data.
+@celery.task(name='make_move', ignore_result=True)
+def make_move(user_id: int, game_id: int, move_san: str) -> None:
+    '''Updates game state by user's move.
        Calls end_game(...) if the game is ended.'''
-    # TODO: draw offer and surrender support
 
     request_datetime = datetime.utcnow()
 
@@ -101,100 +99,111 @@ def update_game(game_id: int, user_id: int, move_san: str = "",
         print("Wrong move side.")
         return
 
-    if move_san:
-        try:
-            board.push_san(move_san)
-            game.fen = board.fen()
+    try:
+        board.push_san(move_san)
+        game.fen = board.fen()
 
-            game_celery_tasks = db.session.query(CeleryTask).\
-                filter(CeleryTask.game_id == game_id).\
+        game_celery_tasks = db.session.query(CeleryTask).\
+            filter(CeleryTask.game_id == game_id).\
+            filter(CeleryTask.type_id.in_((ON_FIRST_MOVE_TIMED_OUT,
+                                           ON_TIME_IS_UP)))
+        for task in game_celery_tasks.\
                 filter(CeleryTask.type_id.in_((ON_FIRST_MOVE_TIMED_OUT,
-                                               ON_TIME_IS_UP)))
-            for task in game_celery_tasks.\
-                    filter(CeleryTask.type_id.in_((ON_FIRST_MOVE_TIMED_OUT,
-                                                   ON_TIME_IS_UP))):
-                revoke(task.id)
-                db.session.delete(task)
+                                               ON_TIME_IS_UP))):
+            revoke(task.id)
+            db.session.delete(task)
 
-            for task in game_celery_tasks.\
-                    filter(CeleryTask.user_id == user_id).\
-                    filter(CeleryTask.type_id == ON_DISCONNECT_TIMED_OUT):
-                revoke(task.id)
-                db.session.delete(task)
+        for task in game_celery_tasks.\
+                filter(CeleryTask.user_id == user_id).\
+                filter(CeleryTask.type_id == ON_DISCONNECT_TIMED_OUT):
+            revoke(task.id)
+            db.session.delete(task)
 
-                opp_sid = game.black_user.sid if white_user\
-                    else game.white_user.sid
-                sio.emit('opp_reconnected', room=opp_sid)
+            opp_sid = game.black_user.sid if white_user\
+                else game.white_user.sid
+            sio.emit('opp_reconnected', room=opp_sid)
 
-            if white_user:
-                game.white_clock -= request_datetime - \
-                        (game.last_move_datetime or request_datetime)
+        if white_user:
+            game.white_clock -= request_datetime - \
+                    (game.last_move_datetime or request_datetime)
 
-                task = on_time_is_up.apply_async(args=(game.black_user_id,
-                                                       game_id),
-                                                 eta=datetime.utcnow() +
-                                                 game.black_clock)
-                celery_task = CeleryTask(id=task.id,
-                                         type_id=ON_TIME_IS_UP,
-                                         game_id=game_id,
-                                         user_id=game.black_user_id,
-                                         eta=datetime.utcnow() +
-                                         game.black_clock)
-                db.session.add(celery_task)
-            else:
-                game.black_clock -= request_datetime - \
-                        (game.last_move_datetime or request_datetime)
+            task = on_time_is_up.apply_async(args=(game.black_user_id,
+                                                   game_id),
+                                             eta=datetime.utcnow() +
+                                             game.black_clock)
+            celery_task = CeleryTask(id=task.id,
+                                     type_id=ON_TIME_IS_UP,
+                                     game_id=game_id,
+                                     user_id=game.black_user_id,
+                                     eta=datetime.utcnow() +
+                                     game.black_clock)
+            db.session.add(celery_task)
+        else:
+            game.black_clock -= request_datetime - \
+                    (game.last_move_datetime or request_datetime)
 
-                task = on_time_is_up.apply_async(args=(game.white_user_id,
-                                                       game_id),
-                                                 eta=datetime.utcnow() +
-                                                 game.white_clock)
-                celery_task = CeleryTask(id=task.id,
-                                         type_id=ON_TIME_IS_UP,
-                                         game_id=game_id,
-                                         user_id=game.black_user_id,
-                                         eta=datetime.utcnow() +
-                                         game.white_clock)
-                db.session.add(celery_task)
+            task = on_time_is_up.apply_async(args=(game.white_user_id,
+                                                   game_id),
+                                             eta=datetime.utcnow() +
+                                             game.white_clock)
+            celery_task = CeleryTask(id=task.id,
+                                     type_id=ON_TIME_IS_UP,
+                                     game_id=game_id,
+                                     user_id=game.black_user_id,
+                                     eta=datetime.utcnow() +
+                                     game.white_clock)
+            db.session.add(celery_task)
 
-            game.last_move_datetime = request_datetime
+        game.last_move_datetime = request_datetime
 
-            if board.fullmove_number == 1:  # and board.turn == chess.BLACK
-                sio.emit('first_move_waiting',
-                         {'wait_time': 15},
-                         room=game.black_user.sid)
-
-                task = on_first_move_timed_out.\
-                    apply_async((game_id, ), countdown=FIRST_MOVE_TIME_OUT)
-
-                celery_task = CeleryTask(id=task.id,
-                                         type_id=ON_FIRST_MOVE_TIMED_OUT,
-                                         game_id=game_id,
-                                         user_id=game.black_user_id,
-                                         eta=datetime.utcnow() +
-                                         timedelta(
-                                             seconds=FIRST_MOVE_TIME_OUT))
-                db.session.add(celery_task)
-
-            db.session.merge(game)
-            db.session.commit()
-
-            sio.emit('game_updated',
-                     {"san": move_san,
-                      "opp_clock": timedelta_to_dict(game.black_clock),
-                      "own_clock": timedelta_to_dict(game.white_clock)},
-                     room=game.white_user.sid)
-            sio.emit('game_updated',
-                     {"san": move_san,
-                      "opp_clock": timedelta_to_dict(game.white_clock),
-                      "own_clock": timedelta_to_dict(game.black_clock)},
+        if board.fullmove_number == 1:  # and board.turn == chess.BLACK
+            sio.emit('first_move_waiting',
+                     {'wait_time': 15},
                      room=game.black_user.sid)
 
-            result = board.result()
-            if result != '*':
-                end_game.delay(game_id, result)
-        except ValueError:
-            pass
+            task = on_first_move_timed_out.\
+                apply_async((game_id, ), countdown=FIRST_MOVE_TIME_OUT)
+
+            celery_task = CeleryTask(id=task.id,
+                                     type_id=ON_FIRST_MOVE_TIMED_OUT,
+                                     game_id=game_id,
+                                     user_id=game.black_user_id,
+                                     eta=datetime.utcnow() +
+                                     timedelta(
+                                         seconds=FIRST_MOVE_TIME_OUT))
+            db.session.add(celery_task)
+
+        db.session.merge(game)
+        db.session.commit()
+
+        sio.emit('game_updated',
+                 {"san": move_san,
+                  "opp_clock": timedelta_to_dict(game.black_clock),
+                  "own_clock": timedelta_to_dict(game.white_clock)},
+                 room=game.white_user.sid)
+        sio.emit('game_updated',
+                 {"san": move_san,
+                  "opp_clock": timedelta_to_dict(game.white_clock),
+                  "own_clock": timedelta_to_dict(game.black_clock)},
+                 room=game.black_user.sid)
+
+        result = board.result()
+        if result != '*':
+            end_game.delay(game_id, result)
+    except ValueError:
+        pass
+
+
+@celery.task(name="on_resign", ignore_result=True)
+def on_resign(user_id: int, game_id: int) -> None:
+    game = db.session.query(Game).get(game_id)
+
+    user_white = user_id == game.white_user_id
+
+    result = "0-1" if user_white else "1-0"
+    reason_white = "You've resigned" if user_white else "Opponent resigned"
+    reason_black = "Opponent resigned" if user_white else "You've resigned"
+    end_game(game_id, result, reason_white, reason_black)
 
 
 @celery.task(name="on_reconnect", ignore_result=True)

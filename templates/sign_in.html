@@ -1,39 +1,33 @@
 {% extends "base.html" %}
 
 {% block content %}
-<form class='basic-form' action="" method="post">
-  <h1 align='center'>Sign in</h1>
-  {{ form.hidden_tag() }}
-  <div class="form-group">
+<body>
+  <form class='basic-form' action="" method="post">
+    <h1 align='center'>Sign in</h1>
+    {{ form.hidden_tag() }}
+    {{ form.csrf_token }}
+
     {{ form.login.label }}<br>
     {{ form.login(class="form-control") }}<br>
-    {% for error in form.login.errors %}
-    <div class="alert alert-danger" role="alert">
-      {{ error }}
-    </div>
-    {% endfor %}
 
     {{ form.password.label }}<br>
     {{ form.password(class="form-control",
     type="password") }}<br>
-    {% for error in form.password.errors %}
-    <div class="alert alert-danger" role="alert">
-      {{ error }}
+
+    {% if message %}
+    <div class="m-0 p-0 mb-2" style="color: red;">
+      Wrong password
     </div>
-    {% endfor %}
+    {% endif %}
 
     {{ form.remember_me() }} {{ form.remember_me.label }}
-  </div>
-  <div class="text-center">
-    {{ form.submit(type="submit",
-    class="btn w-100",
-    style="background-color: #5b636e;
-    color: white;") }}
-  </div>
-  {% if message %}
-  <div class="alert alert-dark mt-2" role="alert">
-    {{ message }}
-  </div>
-  {% endif %}
-</form>
+
+    <div class="text-center">
+      {{ form.submit(type="submit",
+      class="btn w-100",
+      style="background-color: #5b636e;
+      color: white;") }}
+    </div>
+  </form>
+</body>
 {% endblock %}

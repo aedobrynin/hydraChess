@@ -251,7 +251,7 @@
 
     game.undo()
 
-    sio.emit('move', {"san": move.san})
+    sio.emit('make_move', {"san": move.san})
   }
 
 
@@ -400,7 +400,7 @@
 
 
   var config = {
-    pieceTheme: 'static/img/{piece}.svg',
+    pieceTheme: 'static/img/pieces/{piece}.svg',
     draggable: true,
     onDragStart: onDragStart,
     onDrop: onDrop,
@@ -425,6 +425,17 @@
   sio.on('opp_reconnected', onOppReconnected)
 
 
-  window.searchGame = searchGame
-  window.sendMessage = sendMessage
+  $('#search_game_form').on('submit', function(e) {
+    e.preventDefault();
+    searchGame()
+  });
+
+  $('#message_form').on('submit', function(e) {
+    e.preventDefault();
+    sendMessage()
+  })
+
+  $('#resign_btn').on('click', function(e) {
+    sio.emit('resign')
+  })
 })()
