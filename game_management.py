@@ -6,7 +6,7 @@ import rom
 from celery.task.control import revoke
 from flask_celery import make_celery
 from main import app, sio
-from models import User, Game
+from models import User, Game, GameRequest
 
 
 FIRST_MOVE_TIME_OUT = 15
@@ -105,7 +105,7 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
 
     if (is_user_white and board.turn == chess.BLACK) or\
        (not is_user_white and board.turn == chess.WHITE):
-        print("Wrong move side.")
+        print(f"Wrong move side. User {User.get(user_id).login} plays {is_user_white} color, but now is {board.turn} turn. FEN: {game.fen}, move: {move_san} " )
         return
 
     try:
@@ -593,3 +593,50 @@ def update_rating(user_id: int, rating_delta: int) -> None:
     with rom.util.EntityLock(user, 10, 10):
         user.rating += rating_delta
         user.save()
+
+
+@celery.task(name="search_game", ignore_result=True)
+def search_game(user_id: int, minutes: int) -> None:
+    game_time = time(minute=minutes)
+    user = User.get(user_id)
+    with rom.util.EntityLock(user, 10, 10):
+        game_requests = rom.query.Query(GameRequest).filter(time=game_time).all()
+
+        added_to_existed = False
+        if game_requests:
+            accepted_request = \
+                min(game_requests,
+                    key=lambda x: abs(User.get(x.user_id).rating -
+                                      user.rating))
+            if abs(user.rating -
+                   User.get(accepted_request.user_id).rating) <= 200:
+                added_to_existed = True
+
+                accepted_request.delete()
+                user_to_play_with = User.get(accepted_request.user_id)
+
+                game = Game(white_user=user,
+                            black_user=user_to_play_with,
+                            white_clock=game_time,
+                            black_clock=game_time,
+                            is_started=0)
+                game.save()
+
+                user.cur_game_id = game.id
+                user.save()
+
+                with rom.util.EntityLock(user_to_play_with, 10, 10):
+                    user_to_play_with.cur_game_id = game.id
+                    user_to_play_with.in_search = False
+                    user_to_play_with.save()
+
+                start_game.delay(game.id)
+
+        if added_to_existed is False:
+            user.in_search = True
+            user.save()
+
+            game_request = GameRequest(time=game_time,
+                                       user_id=user_id)
+            game_request.save()
+

@@ -10,10 +10,10 @@ tmux_command="tmux new -c $(pwd) \
 split \"./run_flower.sh\" ';' \
 select-pane -t 0 ';' \
 split -h \"./run_normal.sh\" ';' \
+select-pane -t 2 ';' \
 split -h \"./run_low.sh\" ';' \
+split -h \"./run_searcher.sh\" ';' \
 select-pane -t {bottom} ';' \
-split -h \"./run_app.sh\" ';' \
-resize-pane -t 0 -L 15 ';' \
-resize-pane -t 1 -L 7"
+split -h \"./run_app.sh\" ';'"
 
 gnome-terminal -e "$tmux_command"

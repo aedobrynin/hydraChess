@@ -8,7 +8,7 @@ from flask_socketio import SocketIO, disconnect
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 import rom
-from models import User, Game, GameRequest
+from models import User, GameRequest
 from forms import RegisterForm, LoginForm
 import game_management
 
@@ -92,69 +92,20 @@ def search_game(*args, **kwargs):
         Chooses opponent by |opp.rating - user.rating|.
         If the value more than 200, user marks as 'in search'"""
 
-    cur_user = User.get(current_user.id)
-    with rom.util.EntityLock(cur_user, 10, 10):
-        if any([cur_user.cur_game_id, cur_user.in_search]):
-            print("Already in search/in game")
-            return
-
-        if not(args and isinstance(args[0], dict)):
-            print("Bad arguments")
-            return
-
-        minutes = args[0].get('minutes', None)
-        if isinstance(minutes, int) is False or minutes not in [1, 3, 5, 10]:
-            print("Bad arguments")
-            return
-
-        game_time = time(minute=minutes)
-        game_requests = rom.query.Query(GameRequest).filter(time=game_time).all()
-
-        added_to_existed = False
-        if game_requests:
-            accepted_request = \
-                min(game_requests,
-                    key=lambda x: abs(User.get(x.user_id).rating -
-                                      cur_user.rating))
-            if abs(cur_user.rating -
-                   User.get(accepted_request.user_id).rating) <= 200:
-                added_to_existed = True
-
-                accepted_request.delete()
-                user_to_play_with = User.get(accepted_request.user_id)
-
-                game = Game(white_user=cur_user,
-                            black_user=user_to_play_with,
-                            white_clock=game_time,
-                            black_clock=game_time,
-                            is_started=0)
-                game.save()
-
-                cur_user.cur_game_id = game.id
-                user_to_play_with.cur_game_id = game.id
-                user_to_play_with.in_search = False
-
-                cur_user.save()
-                user_to_play_with.save()
-
-                game_management.start_game.delay(game.id)
-
-        if added_to_existed is False:
-            cur_user.in_search = True
-            cur_user.save()
-
-            game_request = GameRequest(time=game_time,
-                                       user_id=cur_user.id)
-            game_request.save()
-
-
-@sio.on('resign')
-@authenticated_only
-def resign(*args, **kwargs) -> None:
-    if current_user.cur_game_id is None:
+    if any([current_user.cur_game_id, current_user.in_search]):
+        print("Already in search/in game")
         return
 
-    game_management.on_resign.delay(current_user.id, current_user.cur_game_id)
+    if not(args and isinstance(args[0], dict)):
+        print("Bad arguments")
+        return
+
+    minutes = args[0].get('minutes', None)
+    if isinstance(minutes, int) is False or minutes not in [1, 3, 5, 10]:
+        print("Bad arguments")
+        return
+
+    game_management.search_game.delay(current_user.id, minutes)
 
 
 @sio.on('resign')

@@ -4,7 +4,8 @@ from kombu import Queue, Exchange
 CELERY_QUEUES = (
     Queue('high', Exchange('high'), routing_key='high'),
     Queue('normal', Exchange('normal'), routing_key='normal'),
-    Queue('low', Exchange('low'), routing_key='low')
+    Queue('low', Exchange('low'), routing_key='low'),
+    Queue('search', Exchange('search'), routing_key='search')
 )
 
 CELERY_DEFAULT_QUEUE = 'normal'
@@ -26,5 +27,7 @@ CELERY_ROUTES = {
     'send_message': {'queue': 'low'},
     'update_k_factor': {'queue': 'low'},
     'on_disconnect': {'queue': 'low'},
-    'update_rating': {'queue': 'low'}
+    'update_rating': {'queue': 'low'},
+    # -- SEARCH QUEUE -- #
+    'search_game': {'queue': 'search'},
 }
