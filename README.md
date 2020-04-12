@@ -1,7 +1,7 @@
 # Hydra Chess
 
 Hydra Chess is a Flask application to play chess online
-Tested on Python 3.7.5 and RabbitMQ 3.7.8
+Tested on Python 3.7.5 and Redis 5.0.5
 
 ![Interface](https://user-images.githubusercontent.com/43320720/78963701-efb42b00-7b00-11ea-9215-51bf4933e749.png)
 
@@ -18,12 +18,7 @@ $ pip3 install -r requirements.txt
 
 2. Install rabbitmq-server
 ```
-$ sudo apt install rabbitmq-server
-```
-
-3. Create the database
-```
-$ export FLASK_APP='main.py' && flask db upgrade
+$ sudo apt install redis
 ```
 
 ## Running
@@ -41,7 +36,6 @@ In tmux everything looks like this:
 ![tmux](https://user-images.githubusercontent.com/43320720/78963320-c5ae3900-7aff-11ea-9dfa-75837a342689.png)
 
 
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
@@ -52,4 +46,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 * [chessboard.js](https://github.com/hashlib/chessboardjs/) (Own fork) - Client side chess board
 * [Celery](https://github.com/celery/celery) - Used to run different tasks on server side
 * [Flask](https://github.com/pallets/flask) - Main server side framework
-* There are also different add-ons for Flask (Flask-Login, Flask-SQLAlchemy, etc...)
+* [rom](https://github.com/josiahcarlson/rom) - Redis object mapper
