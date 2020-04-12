@@ -105,7 +105,9 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
 
     if (is_user_white and board.turn == chess.BLACK) or\
        (not is_user_white and board.turn == chess.WHITE):
-        print(f"Wrong move side. User {User.get(user_id).login} plays {is_user_white} color, but now is {board.turn} turn. FEN: {game.fen}, move: {move_san} " )
+        print(f"Wrong move side. User {User.get(user_id).login} "
+              f"plays {is_user_white} color, but now is {board.turn} "
+              f"turn. FEN: {game.fen}, move: {move_san}")
         return
 
     try:
@@ -597,10 +599,13 @@ def update_rating(user_id: int, rating_delta: int) -> None:
 
 @celery.task(name="search_game", ignore_result=True)
 def search_game(user_id: int, minutes: int) -> None:
+    '''If there is appropriate game request, it starts a new game.
+       Else it makes the game request and adds it to the database.'''
     game_time = time(minute=minutes)
     user = User.get(user_id)
     with rom.util.EntityLock(user, 10, 10):
-        game_requests = rom.query.Query(GameRequest).filter(time=game_time).all()
+        game_requests = \
+            rom.query.Query(GameRequest).filter(time=game_time).all()
 
         added_to_existed = False
         if game_requests:
@@ -639,4 +644,3 @@ def search_game(user_id: int, minutes: int) -> None:
             game_request = GameRequest(time=game_time,
                                        user_id=user_id)
             game_request.save()
-
