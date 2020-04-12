@@ -155,6 +155,15 @@ def resign(*args, **kwargs) -> None:
     game_management.on_resign.delay(current_user.id, current_user.cur_game_id)
 
 
+@sio.on('resign')
+@authenticated_only
+def resign(*args, **kwargs) -> None:
+    if current_user.cur_game_id is None:
+        return
+
+    game_management.on_resign.delay(current_user.id, current_user.cur_game_id)
+
+
 @sio.on('send_message')
 @authenticated_only
 def send_message(*args, **kwargs) -> None:

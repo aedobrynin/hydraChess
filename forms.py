@@ -58,6 +58,7 @@ class RegisterForm(FlaskForm):
                                   validators.EqualTo('password',
                                                      message=("Passwords must "
                                                               "match"))])
+
     submit = SubmitField('Register')
 
 
