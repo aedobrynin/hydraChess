@@ -4,7 +4,6 @@
 <body>
   <form class='basic-form' action="" method="post">
     <h1 align='center'>Sign in</h1>
-    {{ form.hidden_tag() }}
     {{ form.csrf_token }}
 
     {{ form.login.label }}<br>

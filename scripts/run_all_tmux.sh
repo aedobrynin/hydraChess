@@ -3,7 +3,7 @@ if [ $(basename $(pwd)) == hydraChess ]; then
 fi
 
 pkill -2 -f "hydraChess"
-sudo service rabbitmq-server start
+sudo service redis-server start
 
 tmux_command="tmux new -c $(pwd) \
 \"./purge_tasks.sh; ./run_high.sh\" ';' \
