@@ -1,0 +1,51 @@
+from requests import get
+
+
+FLOWER_URL = "http://localhost:5555"
+
+
+def show_make_move_stats():
+    make_move_tasks = get(f"{FLOWER_URL}/api/tasks", data={"taskname": "make_move",
+                                                           "limit": 1000000}).json()
+
+    succeeded_lifetimes = list()
+    total_tasks = len(make_move_tasks)
+    succeeded_tasks = 0
+    failed_tasks = 0
+
+
+    for task in make_move_tasks.values():
+        if task["state"] == 'SUCCESS':
+            succeeded_tasks += 1
+
+            lifetime = task["succeeded"] - task["received"]
+            succeded_lifetimes.append(lifetime)
+        elif task["state"] == 'FAILED':
+            failed_tasks += 1
+
+    succeeded_lifetimes.sort()
+
+    print("-- MAKE_MOVE STATS -- ")
+    print(f"Total tasks: {total_tasks}")
+    print(f"Succeded tasks: {succeded_tasks} ({round(succeded_tasks / total_tasks * 100, 3)}%)")
+    print(f"Failed tasks: {failed_tasks} ({round(failed_tasks / total_tasks * 100, 3)}%)")
+    print(f"Min lifetime: {succeded_lifetimes[0]}. Max lifetime: {succeded_lifetimes[1]}")
+
+    for val in (25, 50, 75, 90):
+        print(f"{val}-th percentile: {succeded_lifetimes[succeded * val // 100]}")
+    print("----------------------")
+
+
+def show_games_stats():
+    start_game_tasks = len(get(f"{FLOWER_URL}/api/tasks", data={"taskname": "start_game"}).json())
+    end_game_tasks = len(get(f"{FLOWER_URL}/api/tasks", data={"taskname": "end_game"}).json())
+
+    print("-- GAMES STATS -- ")
+    print(f"Games started: {start_game_tasks}")
+    print(f"Games ended: {end_game_tasks}")
+    print("------------------")
+
+
+if __name__ == "__main__":
+    show_make_move_stats()
+    show_games_stats()

@@ -1,4 +1,3 @@
-from datetime import time
 from gevent import monkey
 monkey.patch_all()
 
@@ -8,7 +7,7 @@ from flask_socketio import SocketIO, disconnect
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 import rom
-from models import User, Game, GameRequest
+from models import User, GameRequest
 from forms import RegisterForm, LoginForm
 import game_management
 
@@ -105,54 +104,7 @@ def search_game(*args, **kwargs):
         print("Bad arguments")
         return
 
-    game_time = time(minute=minutes)
-    game_requests = rom.query.Query(GameRequest).filter(time=game_time).all()
-
-    added_to_existed = False
-    if game_requests:
-        accepted_request = \
-            min(game_requests,
-                key=lambda x: abs(User.get(x.user_id).rating -
-                                  current_user.rating))
-        if abs(current_user.rating -
-               User.get(accepted_request.user_id).rating) <= 200:
-            added_to_existed = True
-
-            accepted_request.delete()
-            user_to_play_with = User.get(accepted_request.user_id)
-
-            game = Game(white_user=User.get(current_user.id),
-                        black_user=user_to_play_with,
-                        white_clock=game_time,
-                        black_clock=game_time,
-                        is_started=0)
-            game.save()
-
-            current_user.cur_game_id = game.id
-            user_to_play_with.cur_game_id = game.id
-            user_to_play_with.in_search = False
-
-            current_user.save()
-            user_to_play_with.save()
-
-            game_management.start_game.delay(game.id)
-
-    if added_to_existed is False:
-        current_user.in_search = True
-        current_user.save()
-
-        game_request = GameRequest(time=game_time,
-                                   user_id=current_user.id)
-        game_request.save()
-
-
-@sio.on('resign')
-@authenticated_only
-def resign(*args, **kwargs) -> None:
-    if current_user.cur_game_id is None:
-        return
-
-    game_management.on_resign.delay(current_user.id, current_user.cur_game_id)
+    game_management.search_game.delay(current_user.id, minutes)
 
 
 @sio.on('resign')
@@ -182,8 +134,10 @@ def send_message(*args, **kwargs) -> None:
 @sio.on('connect')
 @authenticated_only
 def on_connect(*args, **kwargs) -> None:
-    current_user.sid = request.sid
-    current_user.save()
+    cur_user = User.get(current_user.id)
+    with rom.util.EntityLock(cur_user, 10, 10):
+        cur_user.sid = request.sid
+        cur_user.save()
 
     game_management.on_connect.delay(current_user.id)
 
@@ -195,14 +149,16 @@ def on_disconnect(*args, **kwargs) -> None:
         game_management.on_disconnect.delay(current_user.id,
                                             current_user.cur_game_id)
 
-    if current_user.in_search:
-        current_user.in_search = False
-        current_user.save()
+    cur_user = User.get(current_user.id)
+    with rom.util.EntityLock(cur_user, 10, 10):
+        if cur_user.in_search:
+            cur_user.in_search = False
+            cur_user.save()
 
-        game_request = GameRequest.get_by(user_id=current_user.id,
-                                          _limit=(0, 1))
-        if game_request:
-            game_request[0].delete()
+            game_request = GameRequest.get_by(user_id=cur_user.id,
+                                              _limit=(0, 1))
+            if game_request:
+                game_request[0].delete()
 
 
 @sio.on('make_move')
