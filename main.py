@@ -1,33 +1,26 @@
+from datetime import time
 from gevent import monkey
 monkey.patch_all()
 
 from flask import Flask, request
 from flask import render_template, redirect
-from flask_socketio import SocketIO, join_room, disconnect, leave_room
+from flask_socketio import SocketIO, disconnect
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
-from flask_migrate import Migrate
-from models import db, User, Game, CeleryTask, GameRequest
+import rom
+from models import User, Game, GameRequest
 from forms import RegisterForm, LoginForm
-from datetime import timedelta
+import game_management
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'abacabadabacaba'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///./database.db'
-app.config['CELERY_BROKER_URL'] = 'amqp://localhost//'
-app.config['CELERY_RESULT_BACKEND'] = 'rpc'
-
-db.init_app(app)
-migrate = Migrate(app, db)
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-sio = SocketIO(app, message_queue="amqp://localhost//")
-
-import game_management  # Don't move it anywhere!
+sio = SocketIO(app, message_queue="redis://localhost:6379/1")
 
 
 def authenticated_only(func):
@@ -41,7 +34,7 @@ def authenticated_only(func):
 
 @login_manager.user_loader
 def load_user(user_id: int) -> User:
-    return db.session.query(User).get(user_id)
+    return User.get(user_id)
 
 
 @app.route('/index', methods=['GET'])
@@ -64,12 +57,9 @@ def register():
         return redirect('/')
     form = RegisterForm()
     if form.validate_on_submit():
-        user = User(
-            login=form.login.data
-        )
+        user = User(login=form.login.data)
         user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
+        user.save()
 
         login_user(user)
         return redirect('/')
@@ -84,8 +74,7 @@ def sign_in():
 
     form = LoginForm()
     if form.validate_on_submit():
-        user = db.session.query(User).\
-            filter(User.login == form.login.data).first()
+        user = User.get_by(login=form.login.data)
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
             return redirect("/")
@@ -110,58 +99,51 @@ def search_game(*args, **kwargs):
     if not(args and isinstance(args[0], dict)):
         print("Bad arguments")
         return
+
     minutes = args[0].get('minutes', None)
     if isinstance(minutes, int) is False or minutes not in [1, 3, 5, 10]:
         print("Bad arguments")
         return
 
-    game_time = timedelta(minutes=minutes)
-
-    game_requests = db.session.query(GameRequest).\
-        filter(GameRequest.time == game_time).all()
+    game_time = time(minute=minutes)
+    game_requests = rom.query.Query(GameRequest).filter(time=game_time).all()
 
     added_to_existed = False
     if game_requests:
         accepted_request = \
             min(game_requests,
-                key=lambda x: abs(current_user.rating - x.user.rating))
-        if abs(current_user.rating - accepted_request.user.rating) <= 200:
+                key=lambda x: abs(User.get(x.user_id).rating -
+                                  current_user.rating))
+        if abs(current_user.rating -
+               User.get(accepted_request.user_id).rating) <= 200:
             added_to_existed = True
 
-            db.session.delete(accepted_request)
-            user_to_play_with = accepted_request.user
+            accepted_request.delete()
+            user_to_play_with = User.get(accepted_request.user_id)
 
-            game = Game(white_user_id=current_user.id,
-                        black_user_id=user_to_play_with.id,
+            game = Game(white_user=User.get(current_user.id),
+                        black_user=user_to_play_with,
                         white_clock=game_time,
                         black_clock=game_time,
                         is_started=0)
-
-            db.session.add(game)
-            db.session.commit()
+            game.save()
 
             current_user.cur_game_id = game.id
             user_to_play_with.cur_game_id = game.id
-
             user_to_play_with.in_search = False
 
-            join_room(game.id, sid=current_user.sid)
-            join_room(game.id, sid=user_to_play_with.sid)
-
-            db.session.merge(current_user)
-            db.session.merge(user_to_play_with)
-            db.session.commit()
+            current_user.save()
+            user_to_play_with.save()
 
             game_management.start_game.delay(game.id)
 
     if added_to_existed is False:
         current_user.in_search = True
-        db.session.merge(current_user)
+        current_user.save()
 
         game_request = GameRequest(time=game_time,
                                    user_id=current_user.id)
-        db.session.add(game_request)
-        db.session.commit()
+        game_request.save()
 
 
 @sio.on('resign')
@@ -177,7 +159,7 @@ def resign(*args, **kwargs) -> None:
 @authenticated_only
 def send_message(*args, **kwargs) -> None:
     """Sends message to game chat"""
-    if current_user.cur_game_id is None:
+    if not current_user.cur_game_id:
         return
 
     if args and isinstance(args[0], dict):
@@ -192,29 +174,26 @@ def send_message(*args, **kwargs) -> None:
 @authenticated_only
 def on_connect(*args, **kwargs) -> None:
     current_user.sid = request.sid
-    db.session.merge(current_user)
-    db.session.commit()
+    current_user.save()
 
-    if current_user.cur_game_id:
-        join_room(current_user.cur_game_id, sid=current_user.sid)
     game_management.on_connect.delay(current_user.id)
 
 
 @sio.on('disconnect')
 @authenticated_only
 def on_disconnect(*args, **kwargs) -> None:
-    if current_user.cur_game_id is not None:
-        leave_room(current_user.cur_game_id, sid=request.sid)
+    if current_user.cur_game_id:
         game_management.on_disconnect.delay(current_user.id,
                                             current_user.cur_game_id)
+
     if current_user.in_search:
         current_user.in_search = False
+        current_user.save()
 
-        for game_request in db.session.query(GameRequest).\
-                filter(GameRequest.user_id == current_user.id):
-            db.session.delete(game_request)
-    db.session.merge(current_user)
-    db.session.commit()
+        game_request = GameRequest.get_by(user_id=current_user.id,
+                                          _limit=(0, 1))
+        if game_request:
+            game_request[0].delete()
 
 
 @sio.on('make_move')
@@ -242,17 +221,6 @@ def logout():
 @app.login_manager.unauthorized_handler
 def unauth_handler():
     return redirect('/')
-
-
-@app.before_first_request
-def prepare_database():
-    """Clears user sids and drops celery_scheduled table"""
-    for user in db.session.query(User):
-        user.sid = None
-        db.session.merge(user)
-
-    db.session.query(CeleryTask).delete()
-    db.session.commit()
 
 
 if __name__ == '__main__':
