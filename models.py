@@ -1,41 +1,33 @@
-import re
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy_serializer import SerializerMixin
 from flask_login import UserMixin
-from sqlalchemy.dialects.sqlite import DATETIME
+import redis
+import rom
+import rom.util
+
+rom.util.set_connection_settings(db=1)
+rom.util.use_null_session()
 
 
-db = SQLAlchemy()
+class User(rom.Model, UserMixin):
+    _conn = redis.Redis(db=2)
 
+    id = rom.PrimaryKey(index=True)
 
-class User(db.Model, UserMixin, SerializerMixin):
-    __tablename__ = "users"
+    login = rom.Text(unique=True)
 
-    id = db.Column(db.Integer,
-                   primary_key=True,
-                   autoincrement=True,
-                   unique=True,
-                   nullable=False)
+    hashed_password = rom.Text()
 
-    login = db.Column(db.String,
-                      unique=True,
-                      nullable=False)
+    rating = rom.Integer(default=1200)
 
-    hashed_password = db.Column(db.String,
-                                nullable=False)
+    games_played = rom.Integer(default=0)
 
-    rating = db.Column(db.Integer, default=1200)
+    cur_game_id = rom.Integer(default=None)
 
-    games_played = db.Column(db.Integer, default=0)
+    k_factor = rom.Integer(default=40)
 
-    k_factor = db.Column(db.Integer, default=40)
+    in_search = rom.Boolean(default=False)
 
-    cur_game_id = db.Column(db.Integer, db.ForeignKey('games.id'))
-
-    in_search = db.Column(db.Boolean, default=False)
-
-    sid = db.Column(db.String, nullable=True)
+    sid = rom.Text()
 
     def set_password(self, password: str) -> None:
         self.hashed_password = generate_password_hash(password)
@@ -44,71 +36,44 @@ class User(db.Model, UserMixin, SerializerMixin):
         return check_password_hash(self.hashed_password, password)
 
 
-class Game(db.Model, SerializerMixin):
-    __tablename__ = "games"
+class Game(rom.Model):
+    _conn = redis.Redis(db=3)
 
-    id = db.Column(db.Integer,
-                   primary_key=True,
-                   autoincrement=True,
-                   unique=True,
-                   nullable=False)
+    id = rom.PrimaryKey(index=True)
 
-    white_user_id = db.Column(db.Integer,
-                              db.ForeignKey('users.id'))
-    black_user_id = db.Column(db.Integer,
-                              db.ForeignKey('users.id'))
+    white_user = rom.OneToOne("User", 'no action')
+    black_user = rom.OneToOne("User", 'no action')
 
-    white_user = db.relationship('User',
-                                 primaryjoin="User.id == \
-                                              Game.white_user_id")
-    black_user = db.relationship('User',
-                                 primaryjoin="User.id == \
-                                              Game.black_user_id")
+    fen = rom.Text()
 
-    fen = db.Column(db.String)
+    is_started = rom.Boolean(default=False)
+    is_finished = rom.Boolean(default=False)
 
-    is_started = db.Column(db.Boolean,
-                           default=0)
-    is_finished = db.Column(db.Boolean,
-                            default=0)
+    last_move_datetime = rom.DateTime()
 
-    white_clock = db.Column(db.Interval())
-    black_clock = db.Column(db.Interval())
+    white_clock = rom.Time()
+    black_clock = rom.Time()
 
-    last_move_datetime = \
-        db.Column(DATETIME(storage_format="%(year)04d/%(month)02d/%(day)02d "
-                                          "%(hour)02d:%(minute)02d:%(second)02d",
-                           regexp=re.compile(r"(\d+)/(\d+)/(\d+) (\d+):(\d+):(\d+)")))
+    first_move_timed_out_task_id = rom.Text()
+    first_move_timed_out_task_eta = rom.DateTime()
 
-    result = db.Column(db.String)
+    white_time_is_up_task_id = rom.Text()
+    white_time_is_up_task_eta = rom.DateTime()
+
+    white_disconnect_timed_out_task_id = rom.Text()
+    white_disconnect_timed_out_task_eta = rom.DateTime()
+
+    black_disconnect_timed_out_task_id = rom.Text()
+    black_disconnect_timed_out_task_eta = rom.DateTime()
+
+    white_time_is_up_task_id = rom.Text()
+    black_time_is_up_task_id = rom.Text()
 
 
-class CeleryTaskTypes(db.Model):
-    __tablename__ = "celery_task_types"
+class GameRequest(rom.Model):
+    _conn = redis.Redis(db=4)
 
-    id = db.Column(db.Integer, primary_key=True, unique=True)
-    name = db.Column(db.String, nullable=False)
+    id = rom.PrimaryKey(index=True)
 
-
-class CeleryTask(db.Model):
-    __tablename__ = "celery_tasks"
-
-    id = db.Column(db.Integer, primary_key=True, unique=True)
-    type_id = db.Column(db.Integer, db.ForeignKey('celery_task_types.id'),
-                        primary_key=True)
-    game_id = db.Column(db.Integer, db.ForeignKey('games.id'))
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    eta = db.Column(DATETIME(storage_format="%(year)04d/%(month)02d/%(day)02d "
-                                            "%(hour)02d:%(minute)02d:%(second)02d",
-                             regexp=re.compile(r"(\d+)/(\d+)/(\d+) "
-                                               r"(\d+):(\d+):(\d+)")))
-
-
-class GameRequest(db.Model):
-    __tablename__ = "game_requests"
-
-    id = db.Column(db.Integer, primary_key=True, unique=True)
-
-    time = db.Column(db.Interval)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    user = db.relationship('User')
+    time = rom.Time(index=True)
+    user_id = rom.Integer(index=True)

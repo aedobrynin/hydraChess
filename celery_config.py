@@ -17,7 +17,6 @@ CELERY_ROUTES = {
     'end_game': {'queue': 'high'},
     'on_reconnect': {'queue': 'high'},
     'on_resign': {'queue': 'high'},
-    'update_rating': {'queue': 'high'},
     # -- NORMAL PRIORITY QUEUE -- #
     'on_first_move_timed_out': {'queue': 'normal'},
     'on_disconnect_timed_out': {'queue': 'normal'},
@@ -27,4 +26,5 @@ CELERY_ROUTES = {
     'send_message': {'queue': 'low'},
     'update_k_factor': {'queue': 'low'},
     'on_disconnect': {'queue': 'low'},
+    'update_rating': {'queue': 'low'}
 }

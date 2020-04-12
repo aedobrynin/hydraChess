@@ -5,7 +5,8 @@ import celery_config
 def make_celery(app):
     """Sets up celery instance for work with flask"""
 
-    celery = Celery(app.import_name)
+    celery = Celery(app.import_name,
+                    broker=app.config["CELERY_BROKER_URL"])
     celery.config_from_object(celery_config)
     celery.conf.update(app.config)
 

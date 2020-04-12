@@ -3,7 +3,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField,\
                     BooleanField, validators
 from wtforms.validators import StopValidation
-from models import db, User
+from models import User
 
 
 def login_content_validator(form, field):
@@ -13,7 +13,7 @@ def login_content_validator(form, field):
         raise StopValidation(message=('Only letters, digits and '
                                       'underscore are allowed'))
 
-    if db.session.query(User).filter(User.login == login).first() is not None:
+    if User.get_by(login=login.encode()):
         raise StopValidation(message=('Login already taken'))
 
 
@@ -27,33 +27,38 @@ def password_content_validator(form, field):
 
 
 class RegisterForm(FlaskForm):
-    login = StringField(
-                'Login',
-                validators=[validators.DataRequired(),
-                            login_content_validator,
-                            validators.Length(max=20,
-                                              message=("Login can't be "
-                                                       "longer than "
-                                                       "%(max)d characters"))])
+    login = \
+        StringField('Login',
+                    validators=[validators.DataRequired(),
+                                login_content_validator,
+                                validators.Length(max=20,
+                                                  message=("Login can't be "
+                                                           "longer than "
+                                                           "%(max)d "
+                                                           "characters"))])
 
-    password = PasswordField(
-                'Password',
-                validators=[validators.DataRequired(),
-                            validators.Length(min=8,
-                                              message=("Password can't be "
-                                                       "shorther than %(min)d "
-                                                       "characters")),
-                            validators.Length(max=127,
-                                              message=("Password can't be "
-                                                       "longer than %(max)d "
-                                                       "characters")),
-                            password_content_validator])
+    password = \
+        PasswordField('Password',
+                      validators=[validators.DataRequired(),
+                                  validators.Length(min=8,
+                                                    message=("Password can't "
+                                                             "be shorter than "
+                                                             "%(min)d "
+                                                             "characters")),
+                                  validators.Length(max=127,
+                                                    message=("Password can't "
+                                                             "be longer than "
+                                                             "%(max)d "
+                                                             "characters")),
+                                  password_content_validator])
 
-    confirm_password = PasswordField(
-                        'Confirm password',
-                        validators=[validators.DataRequired(),
-                                    validators.EqualTo('password',
-                                                        message="Passwords must match")])
+    confirm_password = \
+        PasswordField('Confirm password',
+                      validators=[validators.DataRequired(),
+                                  validators.EqualTo('password',
+                                                     message=("Passwords must "
+                                                              "match"))])
+
     submit = SubmitField('Register')
 
 
