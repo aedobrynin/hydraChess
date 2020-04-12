@@ -1,5 +1,39 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="text-white" align="center">Welcome to the Hydra Chess!</h1>
+<head>
+  <link rel="stylesheet"
+        type="text/css"
+        href="{{ url_for('static', filename='css/index.css') }}">i
+</head>
+<body>
+  <div class="container">
+    <div class="row">
+      <div class="col">
+        <h1 class="text-white" align="center">Hydra Chess is an open-source platform for playing chess</h1>
+      </div>
+    </div>
+    <div class="row pt-2">
+      <div class="col text-center">
+        <img id="game_screen" class="w-75 rounded-lg" src="{{ url_for('static', filename='img/hydra_chess.png') }}"></img>
+      </div>
+    </div>
+    <div class="row mt-2">
+      <div class="col text-center">
+        <a class="btn btn-outline-success font-weight-bold w-25"
+           href="{{ url_for('register')}}">Enjoy chess with us!</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+          integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+          crossorigin="anonymous"></script>
+  <script>
+    $(document).ready(function() {
+      $('#game_screen').css({opacity: 0.0, visibility: "visible"}).animate({opacity: 1.0}, 2000);
+    })
+
+  </script>
+</body>
 {% endblock %}

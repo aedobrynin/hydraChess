@@ -1,11 +1,13 @@
 /* -- CHAT CSS -- */
 #left_column {
-  background-color: #343a40;
-  color: white;
 }
 
 #up_container {
-  background-color: #35423D;
+  background-color: #343a40;
+}
+
+#bottom_container {
+  background-color: #343a40;
 }
 
 #find_game_btn {

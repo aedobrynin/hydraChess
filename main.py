@@ -49,7 +49,7 @@ def load_user(user_id: int) -> User:
 def index():
     if current_user.is_authenticated:
         return redirect('/play')
-    return render_template('index.html')
+    return render_template('index.html', title="Hydra Chess")
 
 
 @app.route('/play', methods=['GET'])
@@ -164,6 +164,15 @@ def search_game(*args, **kwargs):
         db.session.commit()
 
 
+@sio.on('resign')
+@authenticated_only
+def resign(*args, **kwargs) -> None:
+    if current_user.cur_game_id is None:
+        return
+
+    game_management.on_resign.delay(current_user.id, current_user.cur_game_id)
+
+
 @sio.on('send_message')
 @authenticated_only
 def send_message(*args, **kwargs) -> None:
@@ -208,7 +217,7 @@ def on_disconnect(*args, **kwargs) -> None:
     db.session.commit()
 
 
-@sio.on('move')
+@sio.on('make_move')
 @authenticated_only
 def move(*args, **kwargs):
     game_id = current_user.cur_game_id
@@ -220,7 +229,7 @@ def move(*args, **kwargs):
         user_id = current_user.id
         san = args[0].get("san")
         if san:
-            game_management.update_game.delay(game_id, user_id, san)
+            game_management.make_move.delay(user_id, game_id, san)
 
 
 @app.route('/logout')

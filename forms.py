@@ -10,9 +10,8 @@ def login_content_validator(form, field):
     login = field.data
 
     if re.search(r'[^a-zA-Z0-9_]', login) is not None:
-        raise StopValidation(message=('The login can only consist of '
-                                      'letters (a-z, A-Z), digits (0-9) '
-                                      'and underscore (_)'))
+        raise StopValidation(message=('Only letters, digits and '
+                                      'underscore are allowed'))
 
     if db.session.query(User).filter(User.login == login).first() is not None:
         raise StopValidation(message=('Login already taken'))
@@ -23,8 +22,8 @@ def password_content_validator(form, field):
 
     bad_char = re.search(r'[^a-zA-Z0-9_$&+,:;=?@#|<>.*()%!-]', password)
     if bad_char:
-        raise StopValidation(message=(f"Character ({bad_char.group(0)}) "
-                                      "can't be used in your password"))
+        raise StopValidation(message=("Only letters, digits and "
+                                      "symbols are allowed"))
 
 
 class RegisterForm(FlaskForm):
@@ -41,17 +40,20 @@ class RegisterForm(FlaskForm):
                 'Password',
                 validators=[validators.DataRequired(),
                             validators.Length(min=8,
-                                              max=127,
-                                              message=("Password must "
-                                                       "be between %(min)d "
-                                                       "and %(max)d "
-                                                       "characters long")),
-                            password_content_validator,
-                            validators.EqualTo('confirm_password',
-                                               message="Passwords must match")])
+                                              message=("Password can't be "
+                                                       "shorther than %(min)d "
+                                                       "characters")),
+                            validators.Length(max=127,
+                                              message=("Password can't be "
+                                                       "longer than %(max)d "
+                                                       "characters")),
+                            password_content_validator])
 
-    confirm_password = PasswordField('Confirm password',
-                                     validators=[validators.DataRequired()])
+    confirm_password = PasswordField(
+                        'Confirm password',
+                        validators=[validators.DataRequired(),
+                                    validators.EqualTo('password',
+                                                        message="Passwords must match")])
     submit = SubmitField('Register')
 
 
