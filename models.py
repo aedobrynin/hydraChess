@@ -48,6 +48,7 @@ class Game(rom.Model):
 
     is_started = rom.Boolean(default=False)
     is_finished = rom.Boolean(default=False)
+    result = rom.Text(default='*')
 
     last_move_datetime = rom.DateTime()
 
