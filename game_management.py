@@ -207,7 +207,7 @@ def on_resign(user_id: int, game_id: int) -> None:
     result = "0-1" if user_white else "1-0"
     reason_white = "You've resigned" if user_white else "Opponent resigned"
     reason_black = "Opponent resigned" if user_white else "You've resigned"
-    
+
     end_game.delay(game_id, result, reason_white, reason_black)
 
 
