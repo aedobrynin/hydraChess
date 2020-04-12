@@ -33,7 +33,7 @@ If there is something different in your project, you can change scripts or [run 
 2. Run it in one tmux window using ```scripts/run_all_tmux.sh``` (tmux must be installed)
 
 In tmux everything looks like this:
-![tmux](https://user-images.githubusercontent.com/43320720/78963320-c5ae3900-7aff-11ea-9dfa-75837a342689.png)
+![tmux](https://user-images.githubusercontent.com/43320720/79076597-11313480-7d04-11ea-8d25-51568a28e69d.png)
 
 
 ## License
