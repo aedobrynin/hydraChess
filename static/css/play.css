@@ -22,10 +22,18 @@
   background-color: #35322F;
 }
 
+
 #draw_btn {
   color: white;
   font-weight: bold;
+}
+
+.standart-draw-btn {
   background-color: #635A4F;
+}
+
+.accept-draw-btn {
+
 }
 
 #messages_box {

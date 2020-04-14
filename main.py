@@ -86,11 +86,7 @@ def sign_in():
 
 @sio.on('search')
 @authenticated_only
-def search_game(*args, **kwargs):
-    """Marks user as "in search" or pairs him with another user from search.
-        Chooses opponent by |opp.rating - user.rating|.
-        If the value more than 200, user marks as 'in search'"""
-
+def on_search(*args, **kwargs):
     if any([current_user.cur_game_id, current_user.in_search]):
         print("Already in search/in game")
         return
@@ -109,16 +105,16 @@ def search_game(*args, **kwargs):
 
 @sio.on('resign')
 @authenticated_only
-def resign(*args, **kwargs) -> None:
+def on_resign(*args, **kwargs) -> None:
     if current_user.cur_game_id is None:
         return
 
-    game_management.on_resign.delay(current_user.id, current_user.cur_game_id)
+    game_management.resign.delay(current_user.id, current_user.cur_game_id)
 
 
 @sio.on('send_message')
 @authenticated_only
-def send_message(*args, **kwargs) -> None:
+def on_send_message(*args, **kwargs) -> None:
     """Sends message to game chat"""
     if not current_user.cur_game_id:
         return
@@ -142,6 +138,22 @@ def on_connect(*args, **kwargs) -> None:
     game_management.on_connect.delay(current_user.id)
 
 
+@sio.on('make_draw_offer')
+@authenticated_only
+def on_make_draw_offer(*args, **kwargs) -> None:
+    if current_user.cur_game_id:
+        game_management.make_draw_offer.delay(current_user.id,
+                                              current_user.cur_game_id)
+
+
+@sio.on('accept_draw_offer')
+@authenticated_only
+def on_accept_draw_offer(*args, **kwargs) -> None:
+    if current_user.cur_game_id:
+        game_management.accept_draw_offer.delay(current_user.id,
+                                                current_user.cur_game_id)
+
+
 @sio.on('disconnect')
 @authenticated_only
 def on_disconnect(*args, **kwargs) -> None:
@@ -163,7 +175,7 @@ def on_disconnect(*args, **kwargs) -> None:
 
 @sio.on('make_move')
 @authenticated_only
-def move(*args, **kwargs):
+def on_make_move(*args, **kwargs):
     game_id = current_user.cur_game_id
 
     if game_id is None:
