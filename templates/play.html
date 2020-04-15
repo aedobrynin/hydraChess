@@ -13,22 +13,22 @@
 <body>
   <div class="container">
     <div class="row">
-      <div id="left_column" class="flex-column
-                                   p-0 center-block
+      <div id="left_column" class="flex-column mx-auto p-0
                                    col-11 order-second
                                    col-sm-12 col-md-12
                                    col-lg-4 order-lg-first
                                    col-xl-4 order-xl-first">
         <div id="up_container" class="rounded">
           <form id="search_game_form" class="pt-2 pb-2 px-1">
-            <select class="form-control" id="game_time">
+            <select class="form-control" id="search_game_time">
               <option value="1">1 minute</option>
               <option value="3">3 minutes</option>
               <option value="5">5 minutes</option>
               <option value="10">10 minutes</option>
             </select>
-            <button type="submit" id="find_game_btn" class="btn mt-2 w-100">
-              Find game
+            <div id="search_spinner" class="spinner w-100 d-none"></div>
+            <button type="submit" id="search_game_btn" class="btn mt-2 w-100">
+              Search game
             </button>
           </form>
           <div id="game_state_buttons" class="pt-2 pb-2 px-1 d-none">
@@ -46,7 +46,7 @@
           </div>
         </div>
       </div>
-      <div id="right_column" class="flex-column center-block
+      <div id="right_column" class="flex-column mx-auto
                                     col-11 order-first
                                     col-sm-12 order-sm-first
                                     col-md-12 order-md-first

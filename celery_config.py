@@ -34,4 +34,5 @@ CELERY_ROUTES = {
     'make_draw_offer': {'queue': 'low'},
     # -- SEARCH QUEUE -- #
     'search_game': {'queue': 'search'},
+    'cancel_search': {'queue': 'search'}
 }
