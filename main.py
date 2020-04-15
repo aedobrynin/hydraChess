@@ -6,8 +6,8 @@ from flask import render_template, redirect
 from flask_socketio import SocketIO, disconnect
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
-import rom
-from models import User, GameRequest
+from rom.util import EntityLock
+from models import User
 from forms import RegisterForm, LoginForm
 import game_management
 
@@ -84,9 +84,9 @@ def sign_in():
     return render_template('sign_in.html', title="Sign in", form=form)
 
 
-@sio.on('search')
+@sio.on('search_game')
 @authenticated_only
-def on_search(*args, **kwargs):
+def on_search_game(*args, **kwargs):
     if any([current_user.cur_game_id, current_user.in_search]):
         print("Already in search/in game")
         return
@@ -101,6 +101,12 @@ def on_search(*args, **kwargs):
         return
 
     game_management.search_game.delay(current_user.id, minutes)
+
+
+@sio.on('cancel_search')
+@authenticated_only
+def on_cancel_search(*args, **kwargs):
+    game_management.cancel_search(current_user.id)
 
 
 @sio.on('resign')
@@ -131,7 +137,7 @@ def on_send_message(*args, **kwargs) -> None:
 @authenticated_only
 def on_connect(*args, **kwargs) -> None:
     cur_user = User.get(current_user.id)
-    with rom.util.EntityLock(cur_user, 10, 10):
+    with EntityLock(cur_user, 10, 10):
         cur_user.sid = request.sid
         cur_user.save()
 
@@ -160,17 +166,7 @@ def on_disconnect(*args, **kwargs) -> None:
     if current_user.cur_game_id:
         game_management.on_disconnect.delay(current_user.id,
                                             current_user.cur_game_id)
-
-    cur_user = User.get(current_user.id)
-    with rom.util.EntityLock(cur_user, 10, 10):
-        if cur_user.in_search:
-            cur_user.in_search = False
-            cur_user.save()
-
-            game_request = GameRequest.get_by(user_id=cur_user.id,
-                                              _limit=(0, 1))
-            if game_request:
-                game_request[0].delete()
+    game_management.cancel_search.delay(current_user.id)
 
 
 @sio.on('make_move')

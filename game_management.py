@@ -694,3 +694,21 @@ def search_game(user_id: int, minutes: int) -> None:
             game_request = GameRequest(time=game_time,
                                        user_id=user_id)
             game_request.save()
+
+
+@celery.task(name="cancel_search", ignore_result=True)
+def cancel_search(user_id: int):
+    '''Cancel game search, if it's possible'''
+    user = User.get(user_id)
+
+    if not user.in_search:
+        return
+
+    with rom.util.EntityLock(user, 10, 10):
+        user.in_search = False
+        user.save()
+
+    game_request = GameRequest.get_by(user_id=user_id,
+                                      _limit=(0, 1))
+    if game_request:
+        game_request[0].delete()

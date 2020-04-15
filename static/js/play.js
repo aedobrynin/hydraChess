@@ -349,9 +349,14 @@
  }
 
   function onGameEnded(data) {
-    $('#find_game_btn').prop('disabled', false)
-    $('#game_time').prop('disabled', false)
+    $('#search_game_time').prop('disabled', false)
     $('#message_input').prop('readonly', true)
+
+    $('#search_game_form').prop('inSearch', false)
+    $('#search_game_time').removeClass('d-none')
+    $('#search_spinner').removeClass('d-flex')
+      .addClass('d-none justify-content-center')
+    $('#search_game_btn').html('Search game')
 
     $('#search_game_form').removeClass('d-none')
     $('#game_state_buttons').addClass('d-none')
@@ -406,12 +411,23 @@
   }
 
   function searchGame() {
-    var minutes = parseInt($('#game_time').val())
-    sio.emit('search', {'minutes': minutes})
-    $('#find_game_btn').prop('disabled', true)
-    $('#game_time').prop('disabled', true)
-
+    var minutes = parseInt($('#search_game_time').val())
+    sio.emit('search_game', {'minutes': minutes})
+    $('#search_game_btn').html('Stop search')
+    $('#search_game_form').prop('inSearch', true)
+    $('#search_game_time').addClass('d-none')
+    $('#search_spinner').addClass('d-flex justify-content-center')
+      .removeClass('d-none')
     localStorage.lastGameTimeValue = minutes
+  }
+
+  function cancelSearch() {
+    sio.emit('cancel_search')
+    $('#search_game_btn').html('Search game')
+    $('#search_game_time').removeClass('d-none')
+    $('#search_game_form').prop('inSearch', false)
+    $('#search_spinner').removeClass('d-flex justify-content-center')
+      .addClass('d-none')
   }
 
   function onDrawOffer() {
@@ -473,7 +489,7 @@
   $(document).ready(messagesBoxResize)
   $(document).ready(function() {
     if (localStorage.lastGameTimeValue) {
-      $('#game_time').val(localStorage.lastGameTimeValue)
+      $('#search_game_time').val(localStorage.lastGameTimeValue)
     }
   })
   $(window).resize(messagesBoxResize)
@@ -493,7 +509,12 @@
 
   $('#search_game_form').on('submit', function(e) {
     e.preventDefault()
-    searchGame()
+
+    if ($('#search_game_form').prop('inSearch')) {
+      cancelSearch()
+    } else {
+      searchGame()
+    }
   })
 
   $('#message_form').on('submit', function(e) {
