@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, time
-from typing import Dict
+from typing import Dict, Optional
 from math import ceil, floor
 import chess
 import rom
@@ -42,6 +42,39 @@ def timedelta_to_time(tdelta: timedelta) -> time:
     return time_
 
 
+@celery.task(name='send_game_info', ignore_result=True)
+def send_game_info(game_id: int, color: str):
+    '''Emits game info to user'''
+    game = Game.get(game_id)
+
+    rating_changes = get_rating_changes(game_id)
+
+    if color == 'w':
+        sio.emit('game_started',
+                 {"fen": game.fen,
+                  "color": "w",
+                  "opp_nickname": game.black_user.login,
+                  "opp_rating": game.black_user.rating,
+                  "opp_clock": time_to_dict(game.black_clock),
+                  "own_clock": time_to_dict(game.white_clock),
+                  "rating_changes": rating_changes["w"].to_dict(),
+                  "can_send_draw_offer": not game.draw_offer_try_this_move,
+                  "last_move": game.last_move},
+                 room=game.white_user.sid)
+    else:
+        sio.emit('game_started',
+                 {"fen": game.fen,
+                  "color": "b",
+                  "opp_nickname": game.white_user.login,
+                  "opp_rating": game.white_user.rating,
+                  "opp_clock": time_to_dict(game.white_clock),
+                  "own_clock": time_to_dict(game.black_clock),
+                  "rating_changes": rating_changes["b"].to_dict(),
+                  "can_send_draw_offer": not game.draw_offer_try_this_move,
+                  "last_move": game.last_move},
+                 room=game.black_user.sid)
+
+
 @celery.task(name='start_game', ignore_result=True)
 def start_game(game_id: int) -> None:
     '''Marks game as started.
@@ -62,27 +95,10 @@ def start_game(game_id: int) -> None:
 
         game.save()
 
-    rating_changes = get_rating_changes(game_id)
+    send_game_info.delay(game_id, 'b')
 
-    sio.emit('game_started',
-             {"fen": game.fen,
-              "color": "w",
-              "opp_nickname": game.black_user.login,
-              "opp_rating": game.black_user.rating,
-              "opp_clock": time_to_dict(game.black_clock),
-              "own_clock": time_to_dict(game.white_clock),
-              "rating_changes": rating_changes["w"].to_dict()},
-             room=game.white_user.sid)
-    sio.emit('game_started',
-             {"fen": game.fen,
-              "color": "b",
-              "opp_nickname": game.white_user.login,
-              "opp_rating": game.white_user.rating,
-              "opp_clock": time_to_dict(game.white_clock),
-              "own_clock": time_to_dict(game.black_clock),
-              "rating_changes": rating_changes["b"].to_dict()},
-             room=game.black_user.sid)
-
+    # Not ".delay()", because of bad emition order.
+    send_game_info(game_id, 'w')
     sio.emit('first_move_waiting',
              {'wait_time': FIRST_MOVE_TIME_OUT},
              room=game.white_user.sid)
@@ -112,29 +128,24 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
 
     try:
         with rom.util.EntityLock(game, 10, 10):
-            board.push_san(move_san)
+            move = board.push_san(move_san)
             game.fen = board.fen()
+            game.last_move = move.uci()
 
             if game.first_move_timed_out_task_id:
                 revoke(game.first_move_timed_out_task_id)
                 game.first_move_timed_out_task_id = None
-                # game.first_move_timed_out_task_eta = None
 
             if is_user_white:
                 revoke(game.white_time_is_up_task_id)
-                # game.white_time_is_up_task_id = None
             else:
                 revoke(game.black_time_is_up_task_id)
-                # game.black_time_is_up_task_id = None
 
-            if is_user_white and game.white_disconnect_timed_out_task_id:
-                revoke(game.white_disconnect_timed_out_task_id)
-                game.white_disconnect_timed_out_task_id = None
-                sio.emit('opp_reconnected', room=game.black_user.sid)
-            elif not is_user_white and game.black_disconnect_timed_out_task_id:
-                revoke(game.black_disconnect_timed_out_task_id)
-                game.black_disconnect_timed_out_task_id = None
-                sio.emit('opp_reconnected', room=game.white_user.sid)
+            if game.draw_offer_sender and game.draw_offer_sender != user_id:
+                # Decline draw offer only if it was asked by the opp
+                # This call is waiting because of an entity lock
+                decline_draw_offer.delay(user_id, game_id)
+            game.draw_offer_try_this_move = False
 
             if is_user_white:
                 game.white_clock = \
@@ -204,8 +215,8 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
         pass
 
 
-@celery.task(name="on_resign", ignore_result=True)
-def on_resign(user_id: int, game_id: int) -> None:
+@celery.task(name="resign", ignore_result=True)
+def resign(user_id: int, game_id: int) -> None:
     """Ends the game due to one player's resignation"""
     game = Game.get(game_id)
 
@@ -218,16 +229,14 @@ def on_resign(user_id: int, game_id: int) -> None:
     end_game.delay(game_id, result, reason_white, reason_black)
 
 
-@celery.task(name="on_reconnect", ignore_result=True)
-def on_reconnect(user_id: int, game_id: int) -> None:
+@celery.task(name="reconnect", ignore_result=True)
+def reconnect(user_id: int, game_id: int) -> None:
     '''Emits fen, pieces color, info about the opponent and
         rating changes to player.
        Emits all info about timers (first move waiting, etc...)
        Emits 'opp_reconnected' to the opponent.'''
 
     game = Game.get(game_id)
-
-    rating_changes = get_rating_changes(game_id)
 
     black_clock = time_to_timedelta(game.black_clock)
     white_clock = time_to_timedelta(game.white_clock)
@@ -243,16 +252,8 @@ def on_reconnect(user_id: int, game_id: int) -> None:
     is_user_white = user_id == game.white_user.id
 
     if is_user_white:
-        sio.emit('game_started',
-                 {'fen': game.fen,
-                  "color": "w",
-                  "opp_nickname": game.black_user.login,
-                  "opp_rating": game.black_user.rating,
-                  "opp_clock": timedelta_to_dict(black_clock),
-                  "own_clock": timedelta_to_dict(white_clock),
-                  "rating_changes": rating_changes["w"].to_dict()},
-                 room=game.white_user.sid)
-
+        # Not ".delay()", because of bad emition order
+        send_game_info(game_id, 'w')
         if game.white_disconnect_timed_out_task_id:
             revoke(game.white_disconnect_timed_out_task_id)
             with rom.util.EntityLock(game, 10, 10):
@@ -263,15 +264,7 @@ def on_reconnect(user_id: int, game_id: int) -> None:
                  room=game.black_user.sid)
 
     else:
-        sio.emit('game_started',
-                 {'fen': game.fen,
-                  "color": "b",
-                  "opp_nickname": game.white_user.login,
-                  "opp_rating": game.white_user.rating,
-                  "opp_clock": timedelta_to_dict(white_clock),
-                  "own_clock": timedelta_to_dict(black_clock),
-                  "rating_changes": rating_changes["b"].to_dict()},
-                 room=game.black_user.sid)
+        send_game_info.delay(game_id, 'b')
 
         if game.black_disconnect_timed_out_task_id:
             revoke(game.black_disconnect_timed_out_task_id)
@@ -314,7 +307,7 @@ def on_reconnect(user_id: int, game_id: int) -> None:
 def on_connect(user_id: int) -> None:
     '''Emits 'set_data' signal.
        If in game, revokes disconnect_timed_out task,
-        calls on_reconnect()'''
+        calls reconnect()'''
     user = User.get(user_id)
 
     sio.emit('set_data',
@@ -323,7 +316,7 @@ def on_connect(user_id: int) -> None:
              room=user.sid)
 
     if user.cur_game_id:
-        on_reconnect(user_id, user.cur_game_id)
+        reconnect(user_id, user.cur_game_id)
 
 
 @celery.task(name="on_disconnect", ignore_result=True)
@@ -337,9 +330,14 @@ def on_disconnect(user_id: int, game_id: int) -> None:
 
     game = Game.get(game_id)
 
+    if game.draw_offer_sender:
+        #  We aren't checking user_id != draw_offer_sender
+        #  It'll be checked in decline_draw_offer func
+        decline_draw_offer.delay(user_id, game_id)
+
     is_user_white = user_id == game.white_user.id
 
-    opp_sid: int
+    opp_sid: Optional[int]
     with rom.util.EntityLock(game, 10, 10):
         if is_user_white:
             game.white_disconnect_timed_out_task_id = task.id
@@ -358,6 +356,55 @@ def on_disconnect(user_id: int, game_id: int) -> None:
                  room=opp_sid)
 
 
+@celery.task(name='make_draw_offer', ignore_result=True)
+def make_draw_offer(user_id: int, game_id: int):
+    '''Makes draw offer, if it's possible.'''
+    game = Game.get(game_id)
+
+    with rom.util.EntityLock(game, 10, 10):
+        if game.draw_offer_sender and game.draw_offer_sender != user_id:
+            #  Accept draw offer if it's already exist
+            accept_draw_offer.delay(user_id, game_id)
+        elif game.draw_offer_try_this_move:
+            return
+
+        game.draw_offer_try_this_move = True
+        game.draw_offer_sender = user_id
+        game.save()
+
+    opp_sid = game.black_user.sid if user_id == game.white_user.id\
+        else game.white_user.sid
+
+    sio.emit('draw_offer', room=opp_sid)
+
+
+@celery.task(name='accept_draw_offer', ignore_result=True)
+def accept_draw_offer(user_id: int, game_id: int):
+    '''Accepts draw offer, if it exists'''
+    game = Game.get(game_id)
+
+    with rom.util.EntityLock(game, 10, 10):
+        if game.draw_offer_sender and game.draw_offer_sender != user_id:
+            opp_sid = User.get(game.draw_offer_sender).sid
+            sio.emit('draw_offer_accepted', room=opp_sid)
+            game.draw_offer_sender = None
+            game.save()
+            end_game.delay(game_id, "1/2-1/2")
+
+
+@celery.task(name='decline_draw_offer', ignore_result=True)
+def decline_draw_offer(user_id: int, game_id: int):
+    '''Declines draw offer, if it exists'''
+    game = Game.get(game_id)
+
+    with rom.util.EntityLock(game, 10, 10):
+        if game.draw_offer_sender and game.draw_offer_sender != user_id:
+            opp_sid = User.get(game.draw_offer_sender).sid
+            sio.emit('draw_offer_declined', room=opp_sid)
+            game.draw_offer_sender = None
+            game.save()
+
+
 @celery.task(name='end_game', ignore_result=True)
 def end_game(game_id: int, result: str,
              reason_white: str = '',
@@ -368,6 +415,9 @@ def end_game(game_id: int, result: str,
      recalculates ratings and k-factors if update_stats is True'''
 
     game = Game.get(game_id)
+
+    if game.is_finished:
+        return
 
     if game.first_move_timed_out_task_id:
         revoke(game.first_move_timed_out_task_id)

@@ -16,8 +16,11 @@ CELERY_ROUTES = {
     'make_move': {'queue': 'high'},
     'start_game': {'queue': 'high'},
     'end_game': {'queue': 'high'},
-    'on_reconnect': {'queue': 'high'},
-    'on_resign': {'queue': 'high'},
+    'reconnect': {'queue': 'high'},
+    'resign': {'queue': 'high'},
+    'accept_draw_offer': {'queue': 'high'},
+    'decline_draw_offer': {'queue': 'high'},
+    'send_game_info': {'queue': 'high'},
     # -- NORMAL PRIORITY QUEUE -- #
     'on_first_move_timed_out': {'queue': 'normal'},
     'on_disconnect_timed_out': {'queue': 'normal'},
@@ -28,6 +31,7 @@ CELERY_ROUTES = {
     'update_k_factor': {'queue': 'low'},
     'on_disconnect': {'queue': 'low'},
     'update_rating': {'queue': 'low'},
+    'make_draw_offer': {'queue': 'low'},
     # -- SEARCH QUEUE -- #
     'search_game': {'queue': 'search'},
 }

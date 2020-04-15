@@ -50,6 +50,7 @@ class Game(rom.Model):
     is_finished = rom.Boolean(default=False)
     result = rom.Text(default='*')
 
+    last_move = rom.Text(default=None)
     last_move_datetime = rom.DateTime()
 
     white_clock = rom.Time()
@@ -69,6 +70,9 @@ class Game(rom.Model):
 
     white_time_is_up_task_id = rom.Text()
     black_time_is_up_task_id = rom.Text()
+
+    draw_offer_sender = rom.Integer(default=None)
+    draw_offer_try_this_move = rom.Boolean(default=False)
 
 
 class GameRequest(rom.Model):
