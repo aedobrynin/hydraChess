@@ -289,7 +289,7 @@
       setTimeout(updateClocks, 1000)
     }
 
-    var ratingChanges = data.rating_changes
+    ratingChanges = data.rating_changes
     var oppNickname = data.opp_nickname
     var oppRating = data.opp_rating
     $('#opp_nickname').html(oppNickname)
@@ -316,6 +316,7 @@
     pushNotification(notification)
 
     $('#draw_btn').html('Offer a draw')
+    $('#draw_btn').prop('accept', false)
     $('#draw_btn').prop('disabled', !data.can_send_draw_offer)
   }
 
@@ -410,7 +411,7 @@
   }
 
   function onDrawOffer() {
-    $('#draw_btn').addClass('accept-draw-btn')
+    $('#draw_btn').prop('accept', true)
     $('#draw_btn').html('Accept a draw offer')
     playDrawOfferSound()
 
@@ -450,7 +451,7 @@
 
   function declineDrawOfferLocally() {
     $('#draw_btn').html('Offer a draw')
-    $('#draw_btn').removeClass('accept-draw-btn')
+    $('#draw_btn').prop('accept', false)
   }
 
   var config = {
@@ -498,7 +499,7 @@
 
   $('#draw_btn').on('click', function(e) {
     var $btn = $('#draw_btn')
-    if ($btn.hasClass('accept-draw-btn')) {
+    if ($btn.prop('accept')) {
       acceptDrawOffer()
     } else {
       makeDrawOffer()
