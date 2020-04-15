@@ -97,7 +97,6 @@
   }
 
   function addHighlights(source, target) {
-    console.log(source, target)
     $board.find('.square-' + source).addClass('highlight-move-source')
     $board.find('.square-' + target).addClass('highlight-move-target')
   }
@@ -278,7 +277,6 @@
     }
 
     if (data.last_move) {
-      console.log(data.last_move.slice(0, 2))
       addHighlights(data.last_move.slice(0, 2),
                     data.last_move.slice(2, 4))
     }
