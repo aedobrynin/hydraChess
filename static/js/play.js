@@ -82,7 +82,8 @@
   }
 
   function onGetMessage(data) {
-    var message = `<span class='notification-nickname'>${data.sender}</span>: ${data.message}<br>`
+    var message = `<span class='notification-nickname'>${data.sender}</span>:` +
+                  `${data.message}<br>`
     pushNotification(message)
   }
   /* -- CHAT RELATED FUNCTIONS -- */
@@ -111,22 +112,24 @@
 
   /* -- TIMERS RELATED FUNCTIONS -- */
   function addFirstMoveTimer(waitTime) {
-    var notification = `<div class='notification'>
-                          <div class='timer-container' id='first_move_timer'>
-                            You have <span class="timer">${waitTime}</span> seconds for your first move
-                          </div>
-                        </div>`
+    var notification = '' +
+      `<div class='notification'>
+         <div class='timer-container' id='first_move_timer'>
+           You have <span class="timer">${waitTime}</span> seconds for your first move
+         </div>
+       </div>`
 
     pushNotification(notification)
     setTimeout(updateTimer, 1000, 'first_move_timer')
   }
 
   function addOppDisconnectedTimer(waitTime) {
-    var notification = `<div class='notification'>
-                          <div class='timer-container' id='opp_disconnected_timer'>
-                            Opponent has <span class="timer">${waitTime}</span> seconds to reconnect
-                          </div>
-                        </div>`
+    var notification = '' +
+      `<div class='notification'>
+         <div class='timer-container' id='opp_disconnected_timer'>
+           Opponent has <span class="timer">${waitTime}</span> seconds to reconnect
+         </div>
+       </div>`
 
     pushNotification(notification)
     setTimeout(updateTimer, 1000, 'opp_disconnected_timer')
@@ -300,14 +303,16 @@
     $('#search_game_form').addClass('d-none')
     $('#game_state_buttons').removeClass('d-none')
 
-    var notification = `<div class='notification'>
-                          <div class='notification-game-start'>NEW GAME</div>
-                          <span class='notification-nickname'>${nickname}</span> (${rating}) VS
-                          <span class='notification-nickname'>${oppNickname}</span> (${oppRating})<br>
-                          <span class='rating-changes'>
-                            win +${ratingChanges.win} / draw ${(ratingChanges.draw <= 0 ? '' : '+') + ratingChanges.draw} / lose ${ratingChanges.lose}
-                          </span>
-                        </div>`
+    var notification = '' +
+      `<div class='notification'>
+         <div class='notification-game-start'>NEW GAME</div>
+         <span class='notification-nickname'>${nickname}</span> (${rating}) VS
+         <span class='notification-nickname'>${oppNickname}</span> (${oppRating})
+         <br>
+         <span class='rating-changes'>
+           win +${ratingChanges.win} / draw ${(ratingChanges.draw <= 0 ? '' : '+') + ratingChanges.draw} / lose ${ratingChanges.lose}
+         </span>
+       </div>`
 
     if ($('#messages_box').html().length !== 0) {
       notification = '<br>' + notification
@@ -371,11 +376,12 @@
       updateRating()
     }
 
-    var notification = `<div class='notification'>
-                          <div class='notification-game-state'>GAME ${result.toUpperCase()}</div>
-                          <div class='notification-res-reason'>${reason}</div>
-                          <span class='new-rating'>New rating: ${rating} (${(ratingDelta <= 0 ? '' : '+') + ratingDelta})</span>
-                        </div>`
+    var notification = '' +
+          `<div class='notification'>
+             <div class='notification-game-state'>GAME ${result.toUpperCase()}</div>
+             <div class='notification-res-reason'>${reason}</div>
+             <span class='new-rating'>New rating: ${rating} (${(ratingDelta <= 0 ? '' : '+') + ratingDelta})</span>
+           </div>`
     pushNotification(notification)
 
     playGameEndedSound()
