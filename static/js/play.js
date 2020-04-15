@@ -349,9 +349,7 @@
  }
 
   function onGameEnded(data) {
-    $('#search_game_time').prop('disabled', false)
     $('#message_input').prop('readonly', true)
-
     $('#search_game_form').prop('inSearch', false)
     $('#search_game_time').removeClass('d-none')
     $('#search_spinner').removeClass('d-flex')

@@ -106,7 +106,7 @@ def on_search_game(*args, **kwargs):
 @sio.on('cancel_search')
 @authenticated_only
 def on_cancel_search(*args, **kwargs):
-    game_management.cancel_search(current_user.id)
+    game_management.cancel_search.delay(current_user.id)
 
 
 @sio.on('resign')
