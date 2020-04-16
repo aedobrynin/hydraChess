@@ -3,7 +3,6 @@ body {
   background-color: #282e33;
 }
 
-
 form.basic-form {
   color: white;
   margin-left: auto;
@@ -12,4 +11,25 @@ form.basic-form {
   border-radius: 5px;
   padding: 10px;
   background-color: #343a40;
+}
+
+@media only screen and (max-width: 768px) {
+  .nav>li>a.dropdown-toggle {
+    display: none;
+  }
+  .nav .dropdown-menu {
+    display:block;
+        position: static;
+    float: none;
+    width: auto;
+    margin-top: 0;
+    background-color: transparent;
+    border: 0;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+  }
+}
+
+.dropdown-item:hover {
+  background-color: #344351;
 }
