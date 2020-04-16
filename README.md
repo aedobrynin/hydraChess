@@ -3,7 +3,7 @@
 Hydra Chess is a Flask application to play chess online
 Tested on Python 3.7.5 and Redis 5.0.5
 
-![Interface](https://user-images.githubusercontent.com/43320720/78963701-efb42b00-7b00-11ea-9215-51bf4933e749.png)
+![Interface](https://github.com/hashlib/hydraChess/blob/master/static/img/hydra_chess.png)
 
 ## Prerequisites
 
