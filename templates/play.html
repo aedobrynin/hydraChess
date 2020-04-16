@@ -83,18 +83,18 @@
   <audio id='draw_offer_sound'>
     <source src="{{ url_for('static', filename='sounds/draw_offer.mp3') }}">
   </audio>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
-          integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
-          crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"
-          integrity="sha256-eqQw3yuTEYSQQIUa3vMMTeSfbIzv24BkWkJi8flcRF8="
-          crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"
-          integrity="sha256-bQmrZe4yPnQrLTY+1gYylfNMBuGfnT/HKsCGX+9Xuqo="
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/gh/hashlib/chessboardjs@1.0.1/lib/chessboard.js"
-          integrity="sha256-4hR3F4qMeo54tZMQUYjE1dYgLgY3NGRbdyQ/6gxPisg="
-          crossorigin="anonymous"></script>
-  <script src="{{ url_for('static', filename='js/play.js') }}"></script>
-</body>
+<body>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"
+        integrity="sha256-eqQw3yuTEYSQQIUa3vMMTeSfbIzv24BkWkJi8flcRF8="
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"
+        integrity="sha256-bQmrZe4yPnQrLTY+1gYylfNMBuGfnT/HKsCGX+9Xuqo="
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/gh/hashlib/chessboardjs@1.0.1/lib/chessboard.js"
+        integrity="sha256-4hR3F4qMeo54tZMQUYjE1dYgLgY3NGRbdyQ/6gxPisg="
+        crossorigin="anonymous"></script>
+<script src="{{ url_for('static', filename='js/play.js') }}"></script>
 {% endblock %}
