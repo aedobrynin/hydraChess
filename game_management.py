@@ -45,18 +45,31 @@ def timedelta_to_time(tdelta: timedelta) -> time:
 @celery.task(name='send_game_info', ignore_result=True)
 def send_game_info(game_id: int, color: str):
     '''Emits game info to user'''
+    request_datetime = datetime.utcnow()
     game = Game.get(game_id)
 
     rating_changes = get_rating_changes(game_id)
 
+    black_clock = game.black_clock
+    white_clock = game.white_clock
+    if game.last_move:
+        next_to_move = game.fen.split()[1]
+        if next_to_move == 'w':
+            white_clock = timedelta_to_time(
+                            time_to_timedelta(white_clock) -
+                            (request_datetime - game.last_move_datetime))
+        else:
+            black_clock = timedelta_to_time(
+                            time_to_timedelta(black_clock) -
+                            (request_datetime - game.last_move_datetime))
     if color == 'w':
         sio.emit('game_started',
                  {"fen": game.fen,
                   "color": "w",
                   "opp_nickname": game.black_user.login,
                   "opp_rating": game.black_user.rating,
-                  "opp_clock": time_to_dict(game.black_clock),
-                  "own_clock": time_to_dict(game.white_clock),
+                  "opp_clock": time_to_dict(black_clock),
+                  "own_clock": time_to_dict(white_clock),
                   "rating_changes": rating_changes["w"].to_dict(),
                   "can_send_draw_offer": not game.draw_offer_try_this_move,
                   "last_move": game.last_move},
@@ -67,8 +80,8 @@ def send_game_info(game_id: int, color: str):
                   "color": "b",
                   "opp_nickname": game.white_user.login,
                   "opp_rating": game.white_user.rating,
-                  "opp_clock": time_to_dict(game.white_clock),
-                  "own_clock": time_to_dict(game.black_clock),
+                  "opp_clock": time_to_dict(white_clock),
+                  "own_clock": time_to_dict(black_clock),
                   "rating_changes": rating_changes["b"].to_dict(),
                   "can_send_draw_offer": not game.draw_offer_try_this_move,
                   "last_move": game.last_move},
