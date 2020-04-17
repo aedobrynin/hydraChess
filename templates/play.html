@@ -11,15 +11,17 @@
         href="{{ url_for('static', filename='css/play.css') }}">
 </head>
 <body>
-  <div class="container">
+  <div class="container mt-2" style="height: 87vh; max-height: 87vh;">
     <div class="row">
-      <div id="left_column" class="flex-column mx-auto p-0
+      <div id="left_column" class="d-flex flex-column flex-grow-1
+                                   mx-auto p-0
                                    col-11 order-second
                                    col-sm-12 col-md-12
                                    col-lg-4 order-lg-first
-                                   col-xl-4 order-xl-first">
-        <div id="up_container" class="rounded">
-          <form id="search_game_form" class="pt-2 pb-2 px-1">
+                                   col-xl-4 order-xl-first"
+                            style="min-height: 10vh;">
+        <div id="up_container" class="row mx-1 rounded">
+          <form id="search_game_form" class="col pt-2 pb-2 px-1">
             <select class="form-control" id="search_game_time">
               <option value="1">1 minute</option>
               <option value="3">3 minutes</option>
@@ -31,40 +33,57 @@
               Search game
             </button>
           </form>
-          <div id="game_state_buttons" class="pt-2 pb-2 px-1 d-none">
+          <div id="game_state_buttons" class="col pt-2 pb-2 px-1 d-none">
             <button id="draw_btn" class="btn w-100">Offer a draw</button>
             <button id="resign_btn" class="btn mt-2 w-100">Resign</button>
          </div>
         </div>
-        <div id="bottom_container" class="rounded pb-2">
-          <div id="messages_box" class="m-2"></div>
-          <div id="message_input_box" class="mt-auto px-1">
-            <form id="message_form">
-              <input id="message_input" class="form-control" type="text"
-                     placeholder="type a message" maxlength="70" readonly>
-            </form>
+        <div id="bottom_container" class="row mx-1 mt-1 mb-0 flex-grow-1 rounded"
+             style="min-height: 150px">
+          <div id="messages_box" class="col my-1 w-100"
+               style="height: 90%; max-height: 90%"></div>
+          <div class="row mx-auto mt-auto w-100" style="height: 10%">
+              <form id="message_form" class="col pt-2 px-1">
+                <input id="message_input" class="form-control" type="text"
+                       placeholder="type a message" maxlength="70" readonly
+                       style="min-height: 0;">
+              </form>
           </div>
         </div>
       </div>
-      <div id="right_column" class="flex-column mx-auto
+      <div id="right_column" class="col mb-3 mx-auto
                                     col-11 order-first
                                     col-sm-12 order-sm-first
                                     col-md-12 order-md-first
-                                    col-lg-8 col-xl-8 mb-3">
-        <div class="row p-0 mx-0 mb-1 player-info">
-          <div id="opp_nickname" class="flex-column flex-shrink-1 my-auto">
+                                    col-lg-8 mr-lg-auto
+                                    col-xl-8 mr-xl-auto">
+        <div id="opp_info" class="d-flex flex-row p-0 mx-0 mb-1 player-info
+                                  mx-sm-auto
+                                  mx-md-auto
+                                  ml-lg-0 mr-lg-auto
+                                  ml-xl-0 mr-xl-auto">
+          <div id="opp_nickname" class="flex-shrink-1 my-auto">
             Opponent
           </div>
-          <div id="opp_rating" class="flex-column flex-grow-1 my-auto pl-1"></div>
-          <div id="opp_clock" class="flex-column flex-shrink-1 clock float-right">
+          <div id="opp_rating" class="flex-grow-1 my-auto pl-1"></div>
+          <div id="opp_clock" class="flex-shrink-1 clock float-right">
             <span class="min">00</span>:<span class="sec">00</span>
           </div>
         </div>
-        <div id="main_board" class="w-100"></div>
-        <div class="row p-0 mx-0 mt-1 player-info">
-          <div id="own_nickname" class="flex-column flex-shrink-1 my-auto"></div>
-          <div id="own_rating" class="flex-column flex-grow-1 my-auto pl-1"></div>
-          <div id="own_clock" class="flex-column flex-shrink-1 clock float-right">
+        <div id="main_board" class="d-flex col px-0
+                                    justify-content-sm-center
+                                    justify-content-md-center
+                                    justify-content-lg-start
+                                    justify-content-xl-start"
+             style="height: 80vh; max-height: 80vh"></div>
+        <div id="own_info" class="d-flex flex-row p-0 mx-0 mt-1 player-info
+                                  mx-sm-auto
+                                  mx-md-auto
+                                  ml-lg-0 mr-lg-auto
+                                  ml-xl-0 mr-xl-auto">
+          <div id="own_nickname" class="flex-shrink-1 my-auto"></div>
+          <div id="own_rating" class="flex-grow-1 my-auto pl-1"></div>
+          <div id="own_clock" class="flex-shrink-1 clock float-right">
             <span class="min">00</span>:<span class="sec">00</span>
           </div>
         </div>
@@ -93,8 +112,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"
         integrity="sha256-bQmrZe4yPnQrLTY+1gYylfNMBuGfnT/HKsCGX+9Xuqo="
         crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/gh/hashlib/chessboardjs@1.0.2/lib/chessboard.js"
-        integrity="sha256-lV4VdR8sFw53YECPd90Zkdtqwsmu1QIP4atDHmnfzJo="
+<script src="https://cdn.jsdelivr.net/gh/hashlib/chessboardjs@1.0.3/lib/chessboard.js"
+        integrity="sha256-ELb20mWb4zB+aE0+0GyqWwZGKndC3QYl155hOJe/hVk="
         crossorigin="anonymous"></script>
 <script src="{{ url_for('static', filename='js/play.js') }}"></script>
 {% endblock %}

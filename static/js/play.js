@@ -53,20 +53,6 @@
   /* -- SOUNDS RELATED FUNCTIONS -- */
 
   /* -- CHAT RELATED FUNCTIONS -- */
-  function messagesBoxResize() {
-    var width = $(window).width()
-
-    if (width >= 1200) {
-      $('#messages_box').css({'height': '630px',
-        'max-height': '630px'})
-    } else if (width >= 992) {
-      $('#messages_box').css({'height': '510px',
-        'max-height': '510px'})
-    } else {
-      $('#messages_box').css({'height': '100px',
-        'max-height': '100px'})
-    }
-  }
 
   function sendMessage() {
     var message = $('#message_input').val().trim()
@@ -208,6 +194,42 @@
     setTimeout(updateClocks, 1000)
   }
   /* -- CLOCKS RELATED FUNCTIONS -- */
+
+  /* -- SIZES RELATED FUNCTIONS -- */
+  function resizeRightColumnElements() {
+    board.resize()
+
+    var $actualBoard = $($board.children()[0])
+    var actualBoardSize = Math.min($actualBoard.width(),
+                                   $actualBoard.height())
+    var containerSize =
+      Math.min($board.width(),
+               $board.height())
+
+    if (containerSize - 20 > actualBoardSize) {
+      $board.width(actualBoardSize)
+      $board.height(actualBoardSize)
+    } else {
+      $board.width($('#right_column').width())
+      $board.height($('#right_column').width())
+      board.resize()
+      $('#opp_info').width(actualBoardSize)
+      $('#own_info').width(actualBoardSize)
+    }
+  }
+  $(window).on('load', resizeRightColumnElements)
+  $(window).resize(resizeRightColumnElements)
+
+  function resizeLeftColumn() {
+    if ($(window).width() >= 992) {
+      $('#left_column').height($('#right_column').height())
+    }    else    {
+      $('#left_column').height(200)
+    }
+  }
+  $(window).on('load', resizeLeftColumn)
+  $(window).resize(resizeLeftColumn)
+  /* -- SIZES RELATED FUNCTIONS -- */
 
   function updateRating() {
     $('#own_rating').html(`(${rating})`)
@@ -483,14 +505,12 @@
   }
 
   board = Chessboard('main_board', config)
-  $(window).resize(board.resize)
-  $(document).ready(messagesBoxResize)
-  $(document).ready(function() {
+
+  $(window).on('load', function() {
     if (localStorage.lastGameTimeValue) {
       $('#search_game_time').val(localStorage.lastGameTimeValue)
     }
   })
-  $(window).resize(messagesBoxResize)
 
   var sio = io({transports: ['websocket'], upgrade: false})
   sio.on('game_started', onGameStarted)
