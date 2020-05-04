@@ -53,8 +53,8 @@ class Game(rom.Model):
     last_move = rom.Text(default=None)
     last_move_datetime = rom.DateTime()
 
-    white_clock = rom.Time()
-    black_clock = rom.Time()
+    white_clock = rom.Float()
+    black_clock = rom.Float()
 
     first_move_timed_out_task_id = rom.Text()
     first_move_timed_out_task_eta = rom.DateTime()
@@ -80,5 +80,5 @@ class GameRequest(rom.Model):
 
     id = rom.PrimaryKey(index=True)
 
-    time = rom.Time(index=True)
+    time = rom.Float(index=True)
     user_id = rom.Integer(index=True)

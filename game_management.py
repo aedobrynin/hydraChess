@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 from typing import Dict, Optional
 from math import ceil, floor
 import chess
@@ -24,24 +24,6 @@ def timedelta_to_dict(tdelta: timedelta) -> Dict[str, int]:
     return {"min": minutes, "sec": seconds}
 
 
-def time_to_timedelta(time_: time) -> timedelta:
-    """Returns timedelta object, which is built from the time object"""
-    return timedelta(minutes=time_.minute, seconds=time_.second)
-
-
-def time_to_dict(time_: time) -> Dict[str, int]:
-    """Returns {"min": minutes, "sec": seconds}
-       extracted from time object"""
-    return timedelta_to_dict(time_to_timedelta(time_))
-
-
-def timedelta_to_time(tdelta: timedelta) -> time:
-    """Returns time object, which is built from the timedelta object"""
-    time_ = time(minute=tdelta.seconds // 60,
-                 second=tdelta.seconds % 60)
-    return time_
-
-
 @celery.task(name='send_game_info', ignore_result=True)
 def send_game_info(game_id: int, color: str):
     '''Emits game info to user'''
@@ -50,26 +32,22 @@ def send_game_info(game_id: int, color: str):
 
     rating_changes = get_rating_changes(game_id)
 
-    black_clock = game.black_clock
-    white_clock = game.white_clock
+    black_clock = timedelta(seconds=game.black_clock)
+    white_clock = timedelta(seconds=game.white_clock)
     if game.last_move:
         next_to_move = game.fen.split()[1]
         if next_to_move == 'w':
-            white_clock = timedelta_to_time(
-                            time_to_timedelta(white_clock) -
-                            (request_datetime - game.last_move_datetime))
+            white_clock -= request_datetime - game.last_move_datetime
         else:
-            black_clock = timedelta_to_time(
-                            time_to_timedelta(black_clock) -
-                            (request_datetime - game.last_move_datetime))
+            black_clock -= request_datetime - game.last_move_datetime
     if color == 'w':
         sio.emit('game_started',
                  {"fen": game.fen,
                   "color": "w",
                   "opp_nickname": game.black_user.login,
                   "opp_rating": game.black_user.rating,
-                  "opp_clock": time_to_dict(black_clock),
-                  "own_clock": time_to_dict(white_clock),
+                  "opp_clock": timedelta_to_dict(black_clock),
+                  "own_clock": timedelta_to_dict(white_clock),
                   "rating_changes": rating_changes["w"].to_dict(),
                   "can_send_draw_offer": not game.draw_offer_try_this_move,
                   "last_move": game.last_move},
@@ -80,8 +58,8 @@ def send_game_info(game_id: int, color: str):
                   "color": "b",
                   "opp_nickname": game.white_user.login,
                   "opp_rating": game.white_user.rating,
-                  "opp_clock": time_to_dict(white_clock),
-                  "own_clock": time_to_dict(black_clock),
+                  "opp_clock": timedelta_to_dict(white_clock),
+                  "own_clock": timedelta_to_dict(black_clock),
                   "rating_changes": rating_changes["b"].to_dict(),
                   "can_send_draw_offer": not game.draw_offer_try_this_move,
                   "last_move": game.last_move},
@@ -161,13 +139,12 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
             game.draw_offer_try_this_move = False
 
             if is_user_white:
-                game.white_clock = \
-                    timedelta_to_time(
-                            time_to_timedelta(game.white_clock) -
-                            (request_datetime - (game.last_move_datetime or
-                                                 request_datetime)))
+                white_clock = timedelta(seconds=game.white_clock) -\
+                        (request_datetime - (game.last_move_datetime or
+                                             request_datetime))
+                game.white_clock = white_clock.total_seconds()
 
-                eta = datetime.utcnow() + time_to_timedelta(game.black_clock)
+                eta = datetime.utcnow() + timedelta(seconds=game.black_clock)
 
                 task = on_time_is_up.apply_async(args=(game.black_user.id,
                                                        game_id),
@@ -176,13 +153,12 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
                 game.white_time_is_up_task_id = task.id
                 game.white_time_is_up_task_eta = eta
             else:
-                game.black_clock = \
-                        timedelta_to_time(
-                            time_to_timedelta(game.black_clock) -
-                            (request_datetime - (game.last_move_datetime or
-                                                 request_datetime)))
+                black_clock = timedelta(seconds=game.black_clock) -\
+                        (request_datetime - (game.last_move_datetime or
+                                             request_datetime))
+                game.black_clock = black_clock.total_seconds()
 
-                eta = datetime.utcnow() + time_to_timedelta(game.white_clock)
+                eta = datetime.utcnow() + timedelta(seconds=game.white_clock)
 
                 task = on_time_is_up.apply_async(args=(game.white_user.id,
                                                        game_id),
@@ -208,8 +184,10 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
 
             game.save()
 
-        white_clock_dict = time_to_dict(game.white_clock)
-        black_clock_dict = time_to_dict(game.black_clock)
+        white_clock_dict = \
+            timedelta_to_dict(timedelta(seconds=game.white_clock))
+        black_clock_dict = \
+            timedelta_to_dict(timedelta(seconds=game.black_clock))
         sio.emit('game_updated',
                  {"san": move_san,
                   "opp_clock": black_clock_dict,
@@ -251,8 +229,8 @@ def reconnect(user_id: int, game_id: int) -> None:
 
     game = Game.get(game_id)
 
-    black_clock = time_to_timedelta(game.black_clock)
-    white_clock = time_to_timedelta(game.white_clock)
+    black_clock = timedelta(seconds=game.black_clock)
+    white_clock = timedelta(seconds=game.white_clock)
 
     color_to_move = game.fen.split()[1]
 
@@ -661,14 +639,14 @@ def update_rating(user_id: int, rating_delta: int) -> None:
 
 
 @celery.task(name="search_game", ignore_result=True)
-def search_game(user_id: int, minutes: int) -> None:
+def search_game(user_id: int, seconds: int) -> None:
     '''If there is appropriate game request, it starts a new game.
        Else it makes the game request and adds it to the database.'''
-    game_time = time(minute=minutes)
+    game_time = timedelta(seconds=seconds)
     user = User.get(user_id)
     with rom.util.EntityLock(user, 10, 10):
         game_requests = \
-            rom.query.Query(GameRequest).filter(time=game_time).all()
+            rom.query.Query(GameRequest).filter(time=seconds).all()
 
         added_to_existed = False
         if game_requests:
@@ -685,8 +663,8 @@ def search_game(user_id: int, minutes: int) -> None:
 
                 game = Game(white_user=user,
                             black_user=user_to_play_with,
-                            white_clock=game_time,
-                            black_clock=game_time,
+                            white_clock=seconds,
+                            black_clock=seconds,
                             is_started=0)
                 game.save()
 
@@ -704,7 +682,7 @@ def search_game(user_id: int, minutes: int) -> None:
             user.in_search = True
             user.save()
 
-            game_request = GameRequest(time=game_time,
+            game_request = GameRequest(time=game_time.total_seconds(),
                                        user_id=user_id)
             game_request.save()
 

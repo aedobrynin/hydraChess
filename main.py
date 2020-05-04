@@ -100,7 +100,7 @@ def on_search_game(*args, **kwargs):
         print("Bad arguments")
         return
 
-    game_management.search_game.delay(current_user.id, minutes)
+    game_management.search_game.delay(current_user.id, minutes * 60)
 
 
 @sio.on('cancel_search')
