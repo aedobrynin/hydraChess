@@ -78,17 +78,19 @@
   }
 
   function highlightLastMove() {
+    if (game === null || moveIndx < 0)
+      return
+
     move = game.undo()
     game.move(move)
 
-    console.log(move)
     $board.find('.square-' + move.from).addClass('highlight-move-from')
     $board.find('.square-' + move.to).addClass('highlight-move-to')
 
     if (game.in_check()) {
       var piece = {type: 'k', color: game.turn()}
       var pos = getPosByPiece(piece)[0]
-      $board.fin('.square-' + pos).addClass('highlight-check')
+      $board.find('.square-' + pos).addClass('highlight-check')
     }
   }
 
@@ -118,15 +120,12 @@
     //removeHighlights()
     //removeTimer('first_move_timer')
 
-    if (game.in_check()) {
-      highlightChecked()
-    }
-
     if (!game.game_over()) {
       playMoveSound()
     }
 
-    addHighlights(source, target)
+    removeHighlights()
+    highlightLastMove()
 
     game.undo()
 
@@ -226,9 +225,8 @@
     if (getFullmoveNumber() === 1) clockPair.start()
     else clockPair.toggle()
 
-    if (game.in_check()) {
-      highlightChecked()
-    }
+    removeHighlights()
+    highlightLastMove()
 
     if (game.turn() === color && !game.game_over()) {
       // Checking in order to do not do this twice
@@ -350,8 +348,7 @@
     $board.width(containerSize)
     $board.height(containerSize)
     board.resize()
-    if (moveIndx >= 0)
-      highlightLastMove()
+    highlightLastMove()
   }
 
   var config = {
@@ -438,8 +435,7 @@
       playMoveSound()
 
       removeHighlights()
-      if (moveIndx >= 0)
-        highlightLastMove()
+      highlightLastMove()
     }
   }
 

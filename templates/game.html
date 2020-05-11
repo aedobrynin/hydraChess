@@ -32,6 +32,18 @@
     <source src="{{ url_for('static', filename='sounds/draw_offer.mp3') }}">
   </audio>
 
+	<form id="search_game_form" class="col pt-2 pb-2 px-1">
+		<select class="form-control" id="search_game_time">
+			<option value="1">1 minute</option>
+			<option value="3">3 minutes</option>
+			<option value="5">5 minutes</option>
+			<option value="10">10 minutes</option>
+		</select>
+		<div id="search_spinner" class="spinner w-100 d-none"></div>
+		<button type="submit" id="search_game_btn" class="btn mt-2 w-100">
+			Search game
+		</button>
+	</form>
 <body>
 {% endblock %}
 
