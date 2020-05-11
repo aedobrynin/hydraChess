@@ -526,5 +526,7 @@
     }
     board.position(game.fen())
     $movesList.find(`#move_${moveIndx}`).addClass('halfmove-active')
+    removeHighlights()
+    highlightLastMove()
   })
 })()
