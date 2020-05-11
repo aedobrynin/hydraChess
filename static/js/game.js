@@ -37,23 +37,22 @@
   }
   /* -- GAME INFO RELATED FUNCTIONS -- */
 
-  /* -- SOUNDS RELATED FUNCTIONS -- */
-  function playGameStartedSound() {
-    $('#game_started_sound').trigger('play')
-  }
+  /* -- SOUNDS -- */
+  var moveSound = new Howl({
+      src: ['/static/sounds/move.mp3']
+  })
+  var drawOfferSound = new Howl({
+      src: ['/static/sounds/draw_offer.mp3']
+  })
 
-  function playMoveSound() {
-    $('#move_sound').trigger('play')
-  }
+  var gameStartedSound = new Howl({
+      src: ['/static/sounds/game_started.mp3']
+  })
 
-  function playGameEndedSound() {
-    $('#game_ended_sound').trigger('play')
-  }
-
-  function playDrawOfferSound() {
-    $('#draw_offer_sound').trigger('play')
-  }
-  /* -- SOUNDS RELATED FUNCTIONS -- */
+  var gameEndedSound = new Howl({
+      src: ['/static/sounds/game_ended.mp3']
+  })
+  /* -- SOUNDS -- */
 
   /* -- CHAT RELATED FUNCTIONS -- */
 
@@ -81,7 +80,7 @@
     if (game === null || moveIndx < 0)
       return
 
-    move = game.undo()
+    var move = game.undo()
     game.move(move)
 
     $board.find('.square-' + move.from).addClass('highlight-move-from')
@@ -121,7 +120,7 @@
     //removeTimer('first_move_timer')
 
     if (!game.game_over()) {
-      playMoveSound()
+      moveSound.play()
     }
 
     removeHighlights()
@@ -230,7 +229,7 @@
 
     if (game.turn() === color && !game.game_over()) {
       // Checking in order to do not do this twice
-      playMoveSound()
+      moveSound.play()
     }
 
     $('#draw_btn').prop('disabled', false)
@@ -314,8 +313,7 @@
   function onDrawOffer() {
     $('#draw_btn').prop('accept', true)
     $('#draw_btn').html('Accept a draw offer')
-    playDrawOfferSound()
-
+    drawOfferSound.play()
   }
 
   function onDrawOfferAccepted() {
@@ -432,7 +430,8 @@
 			$moveCell = $movesList.find(`#move_${moveIndx}`)
       $moveCell.addClass('halfmove-active')
 			$movesList.scrollTop(Math.trunc(moveIndx / 2) * $moveCell.height())
-      playMoveSound()
+
+      moveSound.play()
 
       removeHighlights()
       highlightLastMove()
@@ -448,7 +447,8 @@
       $moveCell = $movesList.find(`#move_${moveIndx}`)
       $moveCell.addClass('halfmove-active')
 			$movesList.scrollTop(Math.max(0, Math.trunc(moveIndx / 2) - 4) * $moveCell.height())
-      playMoveSound()
+
+      moveSound.play()
 
       removeHighlights()
       highlightLastMove()
@@ -462,7 +462,8 @@
       game.reset();
       board.position(game.fen())
       $movesList.scrollTop(0)
-      playMoveSound()
+
+      moveSound.play()
 
       removeHighlights()
     }
@@ -478,7 +479,8 @@
       board.position(game.fen())
       $movesList.find(`#move_${moveIndx}`).addClass('halfmove-active')
       $movesList.scrollTop($movesList[0].scrollHeight)
-      playMoveSound()
+
+      moveSound.play()
 
       removeHighlights()
       highlightLastMove()
@@ -503,7 +505,7 @@
                           <div class="col"></div>
                          </div>`)
     } else {
-      $moveCell = $movesList.children().last().children().last()
+      var $moveCell = $movesList.children().last().children().last()
       $moveCell.attr('id', `move_${indx}`)
       $moveCell.addClass('halfmove halfmove-active')
       $moveCell.append(move)
