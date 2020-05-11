@@ -72,27 +72,27 @@
   /* -- HIGHLIGHTS RELATED FUNCTIONS -- */
   function removeHighlights() {
     $board.find('.square-55d63')
-      .removeClass('highlight-move-source')
-      .removeClass('highlight-move-target')
+      .removeClass('highlight-move-from')
+      .removeClass('highlight-move-to')
       .removeClass('highlight-check')
   }
 
-  function addHighlights(source, target) {
-    $board.find('.square-' + source).addClass('highlight-move-source')
-    $board.find('.square-' + target).addClass('highlight-move-target')
+  function highlightLastMove() {
+    move = game.undo()
+    game.move(move)
+
+    console.log(move)
+    $board.find('.square-' + move.from).addClass('highlight-move-from')
+    $board.find('.square-' + move.to).addClass('highlight-move-to')
+
+    if (game.in_check()) {
+      var piece = {type: 'k', color: game.turn()}
+      var pos = getPosByPiece(piece)[0]
+      $board.fin('.square-' + pos).addClass('highlight-check')
+    }
   }
 
-  function highlightChecked() {
-    var piece = {type: 'k', color: game.turn()}
-    var pos = getPosByPiece(piece)[0]
-
-    $board.find('.square-' + pos).addClass('highlight-check')
-  }
   /* -- HIGHLIGHTS RELATED FUNCTIONS -- */
-
-  function updateRating() {
-    $('#own_rating').html(`(${rating})`)
-  }
 
   function onDragStart(source, piece, position, orientation) {
     if (game_finished || color !== piece[0]) return false
@@ -153,6 +153,8 @@
     })
 
     board.position(game.fen())
+    highlightLastMove()
+
     /*
     playGameStartedSound()
     */
@@ -224,10 +226,6 @@
     if (getFullmoveNumber() === 1) clockPair.start()
     else clockPair.toggle()
 
-    //board.position(game.fen())
-
-    //removeHighlights() //  TODO
-    //addHighlights(move.from, move.to) // TODO
     if (game.in_check()) {
       highlightChecked()
     }
@@ -256,6 +254,7 @@
 
     clockPair.stop()
 
+    /*
     var result = data.result
     var reason = data.reason
 
@@ -273,7 +272,7 @@
 
     playGameEndedSound()
     declineDrawOfferLocally()
-
+    */
     game_finished = true
   }
 
@@ -359,8 +358,8 @@
     onDragStart: onDragStart,
     onDrop: onDrop,
     highlight: true,
-    highlight1: 'highlight-source',
-    highlight2: 'highlight-target'
+    highlight1: 'highlight-from',
+    highlight2: 'highlight-to'
   }
 
   board = Chessboard('board', config)
@@ -435,6 +434,10 @@
       $moveCell.addClass('halfmove-active')
 			$movesList.scrollTop(Math.trunc(moveIndx / 2) * $moveCell.height())
       playMoveSound()
+
+      removeHighlights()
+      if (moveIndx >= 0)
+        highlightLastMove()
     }
   }
 
@@ -448,6 +451,9 @@
       $moveCell.addClass('halfmove-active')
 			$movesList.scrollTop(Math.max(0, Math.trunc(moveIndx / 2) - 4) * $moveCell.height())
       playMoveSound()
+
+      removeHighlights()
+      highlightLastMove()
     }
   }
 
@@ -459,6 +465,8 @@
       board.position(game.fen())
       $movesList.scrollTop(0)
       playMoveSound()
+
+      removeHighlights()
     }
   }
 
@@ -473,6 +481,9 @@
       $movesList.find(`#move_${moveIndx}`).addClass('halfmove-active')
       $movesList.scrollTop($movesList[0].scrollHeight)
       playMoveSound()
+
+      removeHighlights()
+      highlightLastMove()
     }
   }
 
