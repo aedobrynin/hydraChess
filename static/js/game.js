@@ -7,6 +7,7 @@
   var $movesList = $('#moves_list')
   var movesArray = null
   var moveIndx = null
+  var animation = false
   var clockPair = new ClockPair(['clock_a', 'clock_b'], 0)
   clockPair.hide()
 
@@ -179,17 +180,6 @@
       }
     }
 
-    /*
-    if (data.last_move) {
-      addHighlights(data.last_move.slice(0, 2),
-                    data.last_move.slice(2, 4))
-    }
-
-    if (game.in_check()) {
-      highlightChecked()
-    }
-    */
-
     // If game is started, start clocks
     if (!(getFullmoveNumber() === 1 && game.turn() === 'w')) {
       clockPair.start()
@@ -349,11 +339,21 @@
     highlightLastMove()
   }
 
+  function onChange() {
+    animation = true;
+  }
+
+  function onMoveEnd() {
+    animation = false;
+  }
+
   var config = {
     pieceTheme: '../static/img/pieces/{piece}.svg',
     draggable: true,
     onDragStart: onDragStart,
     onDrop: onDrop,
+    onMoveEnd: onMoveEnd,
+    onChange: onChange,
     highlight: true,
     highlight1: 'highlight-from',
     highlight2: 'highlight-to'
@@ -422,7 +422,7 @@
   })
 
   function moveBack() {
-    if (game !== null && moveIndx >= 0) {
+    if (moveIndx >= 0 && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       moveIndx -= 1
       game.undo()
@@ -439,7 +439,7 @@
   }
 
   function moveForward() {
-    if (game !== null && moveIndx + 1 !== movesArray.length) {
+    if (moveIndx + 1 !== movesArray.length && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       moveIndx += 1
       game.move(movesArray[moveIndx])
@@ -456,7 +456,7 @@
   }
 
   function moveToBegin() {
-    if (game !== null) {
+    if (moveIndx !== -1 && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       moveIndx = -1
       game.reset();
@@ -470,7 +470,7 @@
   }
 
   function moveToEnd() {
-    if (game !== null) {
+    if (moveIndx !== movesArray.length - 1 && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       while (moveIndx + 1 !== movesArray.length) {
         moveIndx += 1
@@ -515,7 +515,10 @@
 
   $('body').on('click', '.halfmove', function() {
     $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
-    newMoveIndx = this.id.slice(5)
+    newMoveIndx = parseInt(this.id.slice(5))
+    if (newMoveIndx === moveIndx)
+      return
+
     while (newMoveIndx < moveIndx) {
       moveIndx -= 1
       game.undo()
@@ -528,5 +531,6 @@
     $movesList.find(`#move_${moveIndx}`).addClass('halfmove-active')
     removeHighlights()
     highlightLastMove()
+    moveSound.play()
   })
 })()
