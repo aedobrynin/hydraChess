@@ -36,23 +36,18 @@ def load_user(user_id: int) -> User:
     return User.get(user_id)
 
 
-# TODO: remove
-@app.route('/howler', methods=['GET'])
-def howler_test():
-    return render_template('howler.html')
-
-# TODO: remove
-@app.route('/clock', methods=['GET'])
-def clock_test():
-    return render_template('clock_test.html')
-
-
 @app.route('/index', methods=['GET'])
 @app.route('/', methods=['GET'])
 def index():
     if current_user.is_authenticated:
-        return redirect('/game/')
-    return render_template('index.html', title="Hydra Chess")
+        return redirect('/lobby')
+    return render_template('index.html', title='Hydra Chess')
+
+
+@app.route('/lobby', methods=['GET'])
+@login_required
+def lobby():
+    return render_template('lobby.html', title='Lobby - Hydra Chess')
 
 
 @app.route('/game/<int:game_id>', methods=['GET'])
@@ -64,7 +59,7 @@ def game(game_id: int):
     is_player = current_user.is_authenticated and\
             current_user.id in (game.white_user.id, game.black_user.id)
 
-    return render_template('game.html', title="Play chess",
+    return render_template('game.html', title='Game - Hydra chess',
                            is_player=is_player)
 
 
@@ -114,7 +109,8 @@ def on_search_game(*args, **kwargs):
         return
 
     minutes = args[0].get('minutes', None)
-    if isinstance(minutes, int) is False or minutes not in [1, 3, 5, 10]:
+    if isinstance(minutes, int) is False or\
+            minutes not in (1, 2, 3, 5, 10, 20, 30, 60):
         print("Bad arguments")
         return
 
@@ -157,16 +153,21 @@ def on_send_message(*args, **kwargs) -> None:
 @sio.on('connect')
 def on_connect(*args, **kwargs) -> None:
     game_id = request.args.get('game_id')
-    game = Game.get(game_id)
-    if not game:
-        return disconnect()
+    game = None
+    try:
+        game_id = int(game_id)
+    except (ValueError, TypeError):
+        pass
 
-    # TODO: REMOVE ME AFTER UI FIX
-    if current_user.is_authenticated:
+    if isinstance(game_id, int):
+        game = Game.get(game_id)
+
+    if not game and current_user.is_authenticated:
         cur_user = User.get(current_user.id)
         with EntityLock(cur_user, 10, 10):
             cur_user.sid = request.sid
             cur_user.save()
+        return
 
     is_player = current_user.is_authenticated and\
             current_user.id in (game.white_user.id, game.black_user.id)

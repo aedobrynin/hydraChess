@@ -642,9 +642,9 @@ def search_game(user_id: int, seconds: int) -> None:
                     user_to_play_with.in_search = False
                     user_to_play_with.save()
 
-                sio.emit('redirect', {'url': game.id},
+                sio.emit('redirect', {'url': f'/game/{game.id}'},
                          room=user.sid)
-                sio.emit('redirect', {'url': game.id},
+                sio.emit('redirect', {'url': f'/game/{game.id}'},
                          room=user_to_play_with.sid)
                 start_game.delay(game.id)
 

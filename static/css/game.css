@@ -1,14 +1,4 @@
 /* -- CHAT CSS -- */
-#left_column {
-}
-
-#up_container {
-  background-color: #343a40;
-}
-
-#bottom_container {
-  background-color: #343a40;
-}
 
 #search_game_btn {
   background-color: #b58863;
@@ -28,12 +18,6 @@
   background-color: #635A4F;
 }
 
-#messages_box {
-  overflow-y: auto;
-  color: white;
-  word-wrap: break-word;
-}
-
 /* -- BOARD CSS -- */
 .highlight-from, .highlight-to {
   box-shadow: inset 0 0 4px 4px #ed9e3d;
@@ -45,13 +29,6 @@
 
 .highlight-check {
   box-shadow: inset 0 0 4px 4px #cc1b00;
-}
-
-.player-info {
-  font-weight: bolder;
-  color: white;
-  height: 30px;
-  max-height: 30px;
 }
 
 .clock {
