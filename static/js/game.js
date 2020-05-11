@@ -350,6 +350,8 @@
     $board.width(containerSize)
     $board.height(containerSize)
     board.resize()
+    if (moveIndx >= 0)
+      highlightLastMove()
   }
 
   var config = {
