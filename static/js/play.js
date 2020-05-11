@@ -1,11 +1,14 @@
 ;(function() {
   var board = null
-  var $board = $('#main_board')
+  var $board = $('#board')
   var color = null
   var game = null
-  var nickname = null
-  var rating = null
-  var ratingChanges = null
+  var game_finished = null
+  var $movesList = $('#moves_list')
+  var movesArray = null
+  var moveIndx = null
+  var clockPair = new ClockPair(['clock_a', 'clock_b'], 0)
+  clockPair.hide()
 
   /* -- GAME INFO RELATED FUNCTIONS -- */
   function getFullmoveNumber() {
@@ -54,6 +57,7 @@
 
   /* -- CHAT RELATED FUNCTIONS -- */
 
+  /*
   function sendMessage() {
     var message = $('#message_input').val().trim()
     $('#message_input').val('')
@@ -61,17 +65,8 @@
 
     sio.emit('send_message', {'message': message})
   }
+  */
 
-  function pushNotification(message) {
-    $('#messages_box').append(message)
-    $('#messages_box').scrollTop($('#messages_box')[0].scrollHeight)
-  }
-
-  function onGetMessage(data) {
-    var message = `<span class='notification-nickname'>${data.sender}</span>:` +
-                  `${data.message}<br>`
-    pushNotification(message)
-  }
   /* -- CHAT RELATED FUNCTIONS -- */
 
   /* -- HIGHLIGHTS RELATED FUNCTIONS -- */
@@ -95,148 +90,16 @@
   }
   /* -- HIGHLIGHTS RELATED FUNCTIONS -- */
 
-  /* -- TIMERS RELATED FUNCTIONS -- */
-  function addFirstMoveTimer(waitTime) {
-    var notification = '' +
-      `<div class='notification'>
-         <div class='timer-container' id='first_move_timer'>
-           You have <span class="timer">${waitTime}</span> seconds for your first move
-         </div>
-       </div>`
-
-    pushNotification(notification)
-    setTimeout(updateTimer, 1000, 'first_move_timer')
-  }
-
-  function addOppDisconnectedTimer(waitTime) {
-    var notification = '' +
-      `<div class='notification'>
-         <div class='timer-container' id='opp_disconnected_timer'>
-           Opponent has <span class="timer">${waitTime}</span> seconds to reconnect
-         </div>
-       </div>`
-
-    pushNotification(notification)
-    setTimeout(updateTimer, 1000, 'opp_disconnected_timer')
-  }
-
-  function updateTimer(timerId) {
-    var $timer = $('#' + timerId).find('.timer')
-
-    if ($timer.length === 0) return
-
-    var curValue = parseInt($timer.html())
-
-    if (curValue === 0) removeTimer(timerId)
-    else {
-      $timer.html(curValue - 1)
-      setTimeout(updateTimer, 1000, timerId)
-    }
-  }
-
-  function removeTimer(timerId) {
-    $('#' + timerId).parent().remove()
-  }
-  /* -- TIMERS RELATED FUNCTIONS -- */
-
-  /* -- CLOCKS RELATED FUNCTIONS -- */
-
-  function addLeadingZero(value) {
-    if (value < 10) return '0' + value
-    return value.toString()
-  }
-
-  function setClocks(oppClock, ownClock) {
-    if (oppClock) {
-      oppClock.min = addLeadingZero(oppClock.min)
-      oppClock.sec = addLeadingZero(oppClock.sec)
-
-      var $oppClock = $('#opp_clock')
-      $oppClock.find('.min').html(oppClock.min)
-      $oppClock.find('.sec').html(oppClock.sec)
-    }
-
-    if (ownClock) {
-      ownClock.min = addLeadingZero(ownClock.min)
-      ownClock.sec = addLeadingZero(ownClock.sec)
-
-      var $ownClock = $('#own_clock')
-      $ownClock.find('.min').html(ownClock.min)
-      $ownClock.find('.sec').html(ownClock.sec)
-    }
-  }
-
-  function updateClock(user) {
-    var $clock = $(`#${user}_clock`)
-    var $min = $clock.find('.min')
-    var $sec = $clock.find('.sec')
-
-    var min = parseInt($min.html())
-    var sec = parseInt($sec.html())
-    if (sec > 0) {
-      sec -= 1
-      $sec.html(addLeadingZero(sec))
-    } else if (min > 0) {
-      min -= 1
-      $min.html(addLeadingZero(min))
-      $sec.html('59')
-    }
-  }
-
-  function updateClocks() {
-    if (game == null) return
-
-    if (color === game.turn()) {
-      updateClock('own')
-    } else {
-      updateClock('opp')
-    }
-    setTimeout(updateClocks, 1000)
-  }
-  /* -- CLOCKS RELATED FUNCTIONS -- */
-
-  /* -- SIZES RELATED FUNCTIONS -- */
-  function resizeRightColumnElements() {
-    board.resize()
-
-    var $actualBoard = $($board.children()[0])
-    var actualBoardSize = Math.min($actualBoard.width(),
-                                   $actualBoard.height())
-    var containerSize =
-      Math.min($board.width(),
-               $board.height())
-
-    if (containerSize - 20 > actualBoardSize) {
-      $board.width(actualBoardSize)
-      $board.height(actualBoardSize)
-    } else {
-      $board.width($('#right_column').width())
-      $board.height($('#right_column').width())
-      board.resize()
-      $('#opp_info').width(actualBoardSize)
-      $('#own_info').width(actualBoardSize)
-    }
-  }
-  $(window).on('load', resizeRightColumnElements)
-  $(window).resize(resizeRightColumnElements)
-
-  function resizeLeftColumn() {
-    if ($(window).width() >= 992) {
-      $('#left_column').height($('#right_column').height())
-    }    else    {
-      $('#left_column').height(200)
-    }
-  }
-  $(window).on('load', resizeLeftColumn)
-  $(window).resize(resizeLeftColumn)
-  /* -- SIZES RELATED FUNCTIONS -- */
-
   function updateRating() {
     $('#own_rating').html(`(${rating})`)
   }
 
   function onDragStart(source, piece, position, orientation) {
-    if (game == null || game.game_over() || color !== piece[0]) return false
+    if (game_finished || color !== piece[0]) return false
+    if (moveIndx + 1 !== movesArray.length) {
+      moveToEnd()
+      return false
+    }
   }
 
   function onDrop(source, target) {
@@ -252,8 +115,8 @@
     // illegal move
     if (move === null) return 'snapback'
 
-    removeHighlights()
-    removeTimer('first_move_timer')
+    //removeHighlights()
+    //removeTimer('first_move_timer')
 
     if (game.in_check()) {
       highlightChecked()
@@ -267,37 +130,56 @@
 
     game.undo()
 
-    sio.emit('make_move', {'san': move.san})
+    sio.emit('make_move', {'san': move.san, 'game_id': game_id})
     declineDrawOfferLocally()
   }
 
-  function onSetData(data) {
-    if ('nickname' in data) {
-      nickname = data.nickname
-      $('#own_nickname').html(data.nickname)
-    }
-
-    if ('rating' in data) {
-      rating = data.rating
-      updateRating()
-    }
-  }
-
   function onGameStarted(data) {
-    playGameStartedSound()
+    console.log(data)
 
-    setClocks(data.opp_clock, data.own_clock)
-
-    game = new Chess(data.fen)
-    board.position(game.fen())
-
-    color = data.color
-    if (color === 'w') {
-      board.orientation('white')
-    } else {
-      board.orientation('black')
+    if (data.moves !== "") {
+      movesArray = data.moves.split(',')
+    }
+    else {
+      movesArray = []
     }
 
+    moveIndx = movesArray.length - 1
+
+    game = new Chess()
+    movesArray.forEach(function (move, index) {
+      pushToMovesList(move, index)
+      game.move(move)
+    })
+
+    board.position(game.fen())
+    /*
+    playGameStartedSound()
+    */
+
+    if (data.result === undefined) {
+      clockPair.setTimes(data.black_clock, data.white_clock)
+      if (game.turn() === 'w' && getFullmoveNumber() !== 1)
+        clockPair.setWorkingClock(1)
+      clockPair.show()
+      game_finished = false
+    }
+    else
+      game_finished = true
+
+
+    if (data.is_player) {
+      color = data.color
+      if (color === 'w') {
+        board.orientation('white')
+      } else {
+        if (data.result === undefined)
+          clockPair.rotate()
+        board.orientation('black')
+      }
+    }
+
+    /*
     if (data.last_move) {
       addHighlights(data.last_move.slice(0, 2),
                     data.last_move.slice(2, 4))
@@ -306,12 +188,13 @@
     if (game.in_check()) {
       highlightChecked()
     }
+    */
 
     // If game is started, start clocks
     if (!(getFullmoveNumber() === 1 && game.turn() === 'w')) {
-      setTimeout(updateClocks, 1000)
+      clockPair.start()
     }
-
+    /*
     ratingChanges = data.rating_changes
     var oppNickname = data.opp_nickname
     var oppRating = data.opp_rating
@@ -323,41 +206,28 @@
     $('#search_game_form').addClass('d-none')
     $('#game_state_buttons').removeClass('d-none')
 
-    var notification = '' +
-      `<div class='notification'>
-         <div class='notification-game-start'>NEW GAME</div>
-         <span class='notification-nickname'>${nickname}</span> (${rating}) VS
-         <span class='notification-nickname'>${oppNickname}</span> (${oppRating})
-         <br>
-         <span class='rating-changes'>
-           win +${ratingChanges.win} / draw ${(ratingChanges.draw <= 0 ? '' : '+') + ratingChanges.draw} / lose ${ratingChanges.lose}
-         </span>
-       </div>`
-
-    if ($('#messages_box').html().length !== 0) {
-      notification = '<br>' + notification
-    }
-
-    pushNotification(notification)
-
     $('#draw_btn').html('Offer a draw')
     $('#draw_btn').prop('accept', false)
     $('#draw_btn').prop('disabled', !data.can_send_draw_offer)
+    */
   }
 
   function onGameUpdated(data) {
-    setClocks(data.opp_clock, data.own_clock)
+    console.log(data)
 
-    var move = game.move(data.san)
+    clockPair.setTimes(data.black_clock, data.white_clock)
 
-    if (getFullmoveNumber() === 1) {
-      setTimeout(updateClocks, 1000)
-    }
+    movesArray.push(data.san)
+    pushToMovesList(data.san, moveIndx + 1)
+    moveToEnd()
 
-    board.position(game.fen())
+    if (getFullmoveNumber() === 1) clockPair.start()
+    else clockPair.toggle()
 
-    removeHighlights()
-    addHighlights(move.from, move.to)
+    //board.position(game.fen())
+
+    //removeHighlights() //  TODO
+    //addHighlights(move.from, move.to) // TODO
     if (game.in_check()) {
       highlightChecked()
     }
@@ -381,8 +251,10 @@
     $('#search_game_form').removeClass('d-none')
     $('#game_state_buttons').addClass('d-none')
 
-    removeTimer('first_move_timer')
-    removeTimer('opp_disconnected_timer')
+    //removeTimer('first_move_timer')
+    //removeTimer('opp_disconnected_timer')
+
+    clockPair.stop()
 
     var result = data.result
     var reason = data.reason
@@ -399,23 +271,15 @@
       updateRating()
     }
 
-    var notification = '' +
-          `<div class='notification'>
-             <div class='notification-game-state'>GAME ${result.toUpperCase()}</div>
-             <div class='notification-res-reason'>${reason}</div>
-             <span class='new-rating'>New rating: ${rating} (${(ratingDelta <= 0 ? '' : '+') + ratingDelta})</span>
-           </div>`
-    pushNotification(notification)
-
     playGameEndedSound()
     declineDrawOfferLocally()
 
-    game = null
+    game_finished = true
   }
 
   function onFirstMoveWaiting(data) {
     var waitTime = data.wait_time
-    addFirstMoveTimer(waitTime)
+    //addFirstMoveTimer(waitTime)
   }
 
   function onOppDisconnected(data) {
@@ -455,24 +319,12 @@
     $('#draw_btn').html('Accept a draw offer')
     playDrawOfferSound()
 
-    var notification = `<div class="notification">
-                          You've got a draw offer
-                        </div>`
-    pushNotification(notification)
   }
 
   function onDrawOfferAccepted() {
-    var notification = `<div class="notification">
-                          Draw offer was accepted
-                        </div>`
-    pushNotification(notification)
   }
 
   function onDrawOfferDeclined() {
-    var notification = `<div class="notification">
-                          Draw offer was declined
-                        </div>`
-    pushNotification(notification)
   }
 
   function acceptDrawOffer() {
@@ -482,11 +334,6 @@
   function makeDrawOffer() {
     sio.emit('make_draw_offer')
     $('#draw_btn').prop('disabled', true)
-
-    var notification = `<div class="notification">
-                          Draw offer was sent
-                        </div>`
-    pushNotification(notification)
   }
 
   function declineDrawOfferLocally() {
@@ -494,8 +341,20 @@
     $('#draw_btn').prop('accept', false)
   }
 
+  function updateBoardSize() {
+    var viewportWidth = window.innerWidth - $('#right_container').width()
+    var viewportHeight = window.innerHeight
+
+    var containerSize = Math.floor(Math.min(viewportWidth / 10 * 8,
+                                            viewportHeight / 10 * 8))
+    containerSize -= containerSize % 8 - 1
+    $board.width(containerSize)
+    $board.height(containerSize)
+    board.resize()
+  }
+
   var config = {
-    pieceTheme: 'static/img/pieces/{piece}.svg',
+    pieceTheme: '../static/img/pieces/{piece}.svg',
     draggable: true,
     onDragStart: onDragStart,
     onDrop: onDrop,
@@ -504,7 +363,7 @@
     highlight2: 'highlight-target'
   }
 
-  board = Chessboard('main_board', config)
+  board = Chessboard('board', config)
 
   $(window).on('load', function() {
     if (localStorage.lastGameTimeValue) {
@@ -512,18 +371,31 @@
     }
   })
 
-  var sio = io({transports: ['websocket'], upgrade: false})
+  $(window).on('load', updateBoardSize)
+  $(window).resize(updateBoardSize)
+
+  var href = window.location.href
+  var game_id = href.slice(href.lastIndexOf('/') + 1)
+
+  var sio = io({
+    transports: ['websocket'],
+    upgrade: false,
+    query: {game_id: game_id},
+  })
+
   sio.on('game_started', onGameStarted)
   sio.on('game_updated', onGameUpdated)
   sio.on('game_ended', onGameEnded)
-  sio.on('set_data', onSetData)
-  sio.on('get_message', onGetMessage)
-  sio.on('first_move_waiting', onFirstMoveWaiting)
-  sio.on('opp_disconnected', onOppDisconnected)
-  sio.on('opp_reconnected', onOppReconnected)
-  sio.on('draw_offer', onDrawOffer)
-  sio.on('draw_offer_accepted', onDrawOfferAccepted)
-  sio.on('draw_offer_declined', onDrawOfferDeclined)
+  sio.on('redirect', function(data) {
+    window.location.href = data.url
+  })
+  //sio.on('get_message', onGetMessage)
+  //sio.on('first_move_waiting', onFirstMoveWaiting)
+  //sio.on('opp_disconnected', onOppDisconnected)
+  //sio.on('opp_reconnected', onOppReconnected)
+  //sio.on('draw_offer', onDrawOffer)
+  //sio.on('draw_offer_accepted', onDrawOfferAccepted)
+  //sio.on('draw_offer_declined', onDrawOfferDeclined)
 
   $('#search_game_form').on('submit', function(e) {
     e.preventDefault()
@@ -551,5 +423,97 @@
 
   $('#resign_btn').on('click', function(e) {
     sio.emit('resign')
+  })
+
+  function moveBack() {
+    if (game !== null && moveIndx >= 0) {
+      $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
+      moveIndx -= 1
+      game.undo()
+      board.position(game.fen())
+			$moveCell = $movesList.find(`#move_${moveIndx}`)
+      $moveCell.addClass('halfmove-active')
+			$movesList.scrollTop(Math.trunc(moveIndx / 2) * $moveCell.height())
+      playMoveSound()
+    }
+  }
+
+  function moveForward() {
+    if (game !== null && moveIndx + 1 !== movesArray.length) {
+      $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
+      moveIndx += 1
+      game.move(movesArray[moveIndx])
+      board.position(game.fen())
+      $moveCell = $movesList.find(`#move_${moveIndx}`)
+      $moveCell.addClass('halfmove-active')
+			$movesList.scrollTop(Math.max(0, Math.trunc(moveIndx / 2) - 4) * $moveCell.height())
+      playMoveSound()
+    }
+  }
+
+  function moveToBegin() {
+    if (game !== null) {
+      $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
+      moveIndx = -1
+      game.reset();
+      board.position(game.fen())
+      $movesList.scrollTop(0)
+      playMoveSound()
+    }
+  }
+
+  function moveToEnd() {
+    if (game !== null) {
+      $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
+      while (moveIndx + 1 !== movesArray.length) {
+        moveIndx += 1
+        game.move(movesArray[moveIndx])
+      }
+      board.position(game.fen())
+      $movesList.find(`#move_${moveIndx}`).addClass('halfmove-active')
+      $movesList.scrollTop($movesList[0].scrollHeight)
+      playMoveSound()
+    }
+  }
+
+  $(document).keydown(function(e) {
+    if (e.keyCode === 37) moveBack() // left arrow
+    else if (e.keyCode === 39) moveForward()  // right arrow
+    else if (e.keyCode === 38) moveToBegin()  // up arrow
+    else if (e.keyCode === 40) moveToEnd()  // down arrow
+  });
+
+  function pushToMovesList(move, indx) {
+    $movesList.find('.halfmove').removeClass('halfmove-active')
+    if (game.turn() === 'w') {
+      $movesList.append(`<div class="row move">
+                          <div id="move_${indx}"
+                               class="col halfmove halfmove-active">
+                            ${move}
+                          </div>
+                          <div class="col"></div>
+                         </div>`)
+    } else {
+      $moveCell = $movesList.children().last().children().last()
+      $moveCell.attr('id', `move_${indx}`)
+      $moveCell.addClass('halfmove halfmove-active')
+      $moveCell.append(move)
+    }
+    $movesList.scrollTop($movesList[0].scrollHeight)
+  }
+
+  $('body').on('click', '.halfmove', function() {
+    $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
+    newMoveIndx = this.id.slice(5)
+    while (newMoveIndx < moveIndx) {
+      moveIndx -= 1
+      game.undo()
+    }
+    while (newMoveIndx > moveIndx) {
+      moveIndx += 1
+      game.move(movesArray[moveIndx])
+    }
+    board.position(game.fen())
+    $movesList.find(`#move_${moveIndx}`).addClass('halfmove-active')
   })
 })()

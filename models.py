@@ -50,11 +50,11 @@ class Game(rom.Model):
     is_finished = rom.Boolean(default=False)
     result = rom.Text(default='*')
 
-    last_move = rom.Text(default=None)
+    moves = rom.Text(default="")
     last_move_datetime = rom.DateTime()
 
-    white_clock = rom.Float()
-    black_clock = rom.Float()
+    white_clock = rom.Integer()
+    black_clock = rom.Integer()
 
     first_move_timed_out_task_id = rom.Text()
     first_move_timed_out_task_eta = rom.DateTime()
