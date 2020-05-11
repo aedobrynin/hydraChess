@@ -95,7 +95,6 @@
   }
 
   /* -- HIGHLIGHTS RELATED FUNCTIONS -- */
-
   function onDragStart(source, piece, position, orientation) {
     if (game_finished || color !== piece[0]) return false
     if (moveIndx + 1 !== movesArray.length) {
@@ -130,7 +129,7 @@
     game.undo()
 
     sio.emit('make_move', {'san': move.san, 'game_id': game_id})
-    declineDrawOfferLocally()
+    //declineDrawOfferLocally()
   }
 
   function onGameStarted(data) {
@@ -151,7 +150,9 @@
       game.move(move)
     })
 
+    animation = true
     board.position(game.fen())
+
     highlightLastMove()
 
     /*
@@ -207,11 +208,15 @@
 
     clockPair.setTimes(data.black_clock, data.white_clock)
 
+    // There won't be animation, because we already updated board position
+    // before. animation = true will block moveToEnd() call.
+    if (game.turn() === color)
+      animation = false
+
     movesArray.push(data.san)
     pushToMovesList(data.san, moveIndx + 1)
     moveToEnd()
-
-    if (getFullmoveNumber() === 1) clockPair.start()
+    if (!clockPair.works) clockPair.start()
     else clockPair.toggle()
 
     removeHighlights()
@@ -339,12 +344,10 @@
     highlightLastMove()
   }
 
-  function onChange() {
+  // should be called before EVERY animation
+  function blockAnimation() {
     animation = true;
-  }
-
-  function onMoveEnd() {
-    animation = false;
+    setTimeout(function() { animation = false}, config.moveSpeed);
   }
 
   var config = {
@@ -352,11 +355,11 @@
     draggable: true,
     onDragStart: onDragStart,
     onDrop: onDrop,
-    onMoveEnd: onMoveEnd,
-    onChange: onChange,
+    onChange: blockAnimation,
     highlight: true,
     highlight1: 'highlight-from',
-    highlight2: 'highlight-to'
+    highlight2: 'highlight-to',
+    moveSpeed: 200
   }
 
   board = Chessboard('board', config)
@@ -402,9 +405,9 @@
       searchGame()
     }
   })
-
+  /*
   $('#message_form').on('submit', function(e) {
-    e.preventDefault()
+    e.preventDefault(
     sendMessage()
   })
 
@@ -420,6 +423,7 @@
   $('#resign_btn').on('click', function(e) {
     sio.emit('resign')
   })
+  */
 
   function moveBack() {
     if (moveIndx >= 0 && !animation) {
@@ -496,7 +500,7 @@
 
   function pushToMovesList(move, indx) {
     $movesList.find('.halfmove').removeClass('halfmove-active')
-    if (game.turn() === 'w') {
+    if (indx % 2 == 0) {
       $movesList.append(`<div class="row move">
                           <div id="move_${indx}"
                                class="col halfmove halfmove-active">

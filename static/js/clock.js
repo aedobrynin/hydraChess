@@ -73,6 +73,7 @@ class ClockPair {
     this.clocks = [new Clock(domIds[0], seconds), new Clock(domIds[1], seconds)]
     this.rotated = false
     this.workingClock = 0
+    this.works = false
   }
 
   setTime(clockIndx, seconds) {
@@ -119,10 +120,12 @@ class ClockPair {
 
   stop() {
     this.clocks[this.workingClock].stop()
+    this.works = false
   }
 
   start() {
     this.clocks[this.workingClock].start()
+    this.works = true
   }
 
   reset() {
