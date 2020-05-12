@@ -108,11 +108,20 @@ def on_search_game(*args, **kwargs):
         print("Bad arguments")
         return
 
+    # If valid minutes value provided, create game request with it.
+    # If valid game_id provided, create game request with the same game time as
+    # the game.
     minutes = args[0].get('minutes', None)
     if isinstance(minutes, int) is False or\
             minutes not in (1, 2, 3, 5, 10, 20, 30, 60):
-        print("Bad arguments")
-        return
+        try:
+            game_id = args[0].get('game_id', None)
+            game = Game.get(game_id)
+            if not game:
+                return
+            minutes = game.total_clock // 60
+        except (ValueError, TypeError):
+            return
 
     game_management.search_game.delay(current_user.id, minutes * 60)
 

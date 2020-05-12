@@ -2,12 +2,22 @@
   var board = null
   var $board = $('#board')
   var color = null
+
   var game = null
   var game_finished = null
+
   var $movesList = $('#moves_list')
   var movesArray = null
   var moveIndx = null
+
   var animation = false
+
+  var $firstMoveAlert = $('#first_move_alert')
+  var firstMoveTimer = new Timer('first_move_seconds')
+
+  var $oppDisconnectedAlert = $('#opp_disconnected_alert')
+  var oppDisconnectedTimer = new Timer('reconnect_wait_seconds')
+
   var clockPair = new ClockPair(['clock_a', 'clock_b'], 0)
   clockPair.hide()
 
@@ -56,11 +66,31 @@
   /* -- SOUNDS -- */
 
   function setPlayersInfo(info_a, info_b) {
-    $container_a = $('#info_a')
-    $container_b = $('#info_b')
+    $('#info_a').html(`${info_a.nickname} (${info_a.rating})`)
+    $('#info_b').html(`${info_b.nickname} (${info_b.rating})`)
+  }
 
-    $container_a.html(`${info_a.nickname} (${info_a.rating})`)
-    $container_b.html(`${info_b.nickname} (${info_b.rating})`)
+  function setResults(result) {
+    var whiteResult = null, blackResult = null
+    if (result === '1-0') {
+      whiteResult = 'won'
+      blackResult = 'lost'
+    } else if (result === '0-1') {
+      whiteResult = 'lost'
+      blackResult = 'won'
+    } else if (result === '1/2-1/2')  {
+      whiteResult = blackResult = 'draw'
+    } else if (result === '-') {
+      whiteResult = blackResult = 'canceled'
+    }
+
+    if (board.orientation() === 'white') {
+      $('#info_a').append(` <b>(${blackResult})</b>`)
+      $('#info_b').append(` <b>(${whiteResult})</b>`)
+    } else {
+      $('#info_a').append(` <b>(${whiteResult})</b>`)
+      $('#info_b').append(` <b>(${blackResult})</b>`)
+    }
   }
 
   /* -- CHAT RELATED FUNCTIONS -- */
@@ -124,8 +154,8 @@
     // illegal move
     if (move === null) return 'snapback'
 
-    //removeHighlights()
-    //removeTimer('first_move_timer')
+    $firstMoveAlert.hide()
+    firstMoveTimer.stop()
 
     if (!game.game_over()) {
       moveSound.play()
@@ -143,7 +173,7 @@
   function onGameStarted(data) {
     console.log(data)
 
-    if (data.moves !== "") {
+    if (data.moves !== '') {
       movesArray = data.moves.split(',')
     }
     else {
@@ -163,9 +193,7 @@
 
     highlightLastMove()
 
-    /*
-    playGameStartedSound()
-    */
+    gameStartedSound.play()
 
     if (data.result === undefined) {
       clockPair.setTimes(data.black_clock, data.white_clock)
@@ -175,11 +203,6 @@
       game_finished = false
     }
     else {
-      //$movesList.height(125)
-      $movesList.css('margin-bottom', '0')
-      $('#result').css('display', 'block')
-      $('#result').html(`${data.result_reason}`)
-
       game_finished = true
     }
 
@@ -194,6 +217,10 @@
         board.orientation('black')
         setPlayersInfo(data.white_user, data.black_user)
       }
+    }
+
+    if (data.result !== undefined) {
+      setResults(data.result)
     }
 
     // If game is started, start clocks
@@ -237,8 +264,8 @@
     removeHighlights()
     highlightLastMove()
 
+    // Checking in order to do not do this twice
     if (game.turn() === color && !game.game_over()) {
-      // Checking in order to do not do this twice
       moveSound.play()
     }
 
@@ -259,21 +286,22 @@
     $('#game_state_buttons').addClass('d-none')
     */
 
-    //removeTimer('first_move_timer')
-    //removeTimer('opp_disconnected_timer')
+    $firstMoveAlert.hide()
+    firstMoveTimer.stop()
+
+    $oppDisconnectedAlert.hide()
+    oppDisconnectedTimer.stop()
 
     clockPair.stop()
+    setResults(data.result)
 
-    // Show"New game" button, if we played in this game.
+    // If we played in this game. Offer to start new game.
     if (color !== null) {
-      $('#new_game_btn').css('display', '')
+      $('#new_game_btn').css('display', 'block')
     }
-    // Show game result.
-    $('#moves_list').css('margin-bottom', '0')
-    $('#result').css('display', 'block')
-    $('#result').html(`${data.reason}`)
 
-
+    // Show modal
+    $('#game_results_modal').modal('show')
 
     /*
     var result = data.result
@@ -299,41 +327,33 @@
 
   function onFirstMoveWaiting(data) {
     var waitTime = data.wait_time
+
+    firstMoveTimer.stop()
+    firstMoveTimer.setTime(waitTime)
+    firstMoveTimer.start()
+    $firstMoveAlert.fadeIn()
     //addFirstMoveTimer(waitTime)
   }
 
   function onOppDisconnected(data) {
+    // In order to do not make overlapping alerts.
+    if ($firstMoveAlert.css('display') !== 'none')
+      return
+
     var waitTime = data.wait_time
 
-    if ($('#opp_disconnected_timer').length === 0) {
-      addOppDisconnectedTimer(waitTime)
-    }
+    oppDisconnectedTimer.stop()
+    oppDisconnectedTimer.setTime(waitTime)
+    oppDisconnectedTimer.start()
+    $oppDisconnectedAlert.fadeIn()
   }
 
   function onOppReconnected() {
-    removeTimer('opp_disconnected_timer')
+    $oppDisconnectedAlert.hide()
+    oppDisconnectedTimer.stop()
   }
 
-  function searchGame() {
-    var minutes = parseInt($('#search_game_time').val())
-    sio.emit('search_game', {'minutes': minutes})
-    $('#search_game_btn').html('Stop search')
-    $('#search_game_form').prop('inSearch', true)
-    $('#search_game_time').addClass('d-none')
-    $('#search_spinner').addClass('d-flex justify-content-center')
-      .removeClass('d-none')
-    localStorage.lastGameTimeValue = minutes
-  }
-
-  function cancelSearch() {
-    sio.emit('cancel_search')
-    $('#search_game_btn').html('Search game')
-    $('#search_game_time').removeClass('d-none')
-    $('#search_game_form').prop('inSearch', false)
-    $('#search_spinner').removeClass('d-flex justify-content-center')
-      .addClass('d-none')
-  }
-
+  /*
   function onDrawOffer() {
     $('#draw_btn').prop('accept', true)
     $('#draw_btn').html('Accept a draw offer')
@@ -359,7 +379,7 @@
     $('#draw_btn').html('Offer a draw')
     $('#draw_btn').prop('accept', false)
   }
-
+  */
   function updateBoardSize() {
     var viewportWidth = window.innerWidth - $('#right_container').width()
     var viewportHeight = window.innerHeight
@@ -418,22 +438,13 @@
     window.location.href = data.url
   })
   //sio.on('get_message', onGetMessage)
-  //sio.on('first_move_waiting', onFirstMoveWaiting)
-  //sio.on('opp_disconnected', onOppDisconnected)
-  //sio.on('opp_reconnected', onOppReconnected)
+  sio.on('first_move_waiting', onFirstMoveWaiting)
+  sio.on('opp_disconnected', onOppDisconnected)
+  sio.on('opp_reconnected', onOppReconnected)
   //sio.on('draw_offer', onDrawOffer)
   //sio.on('draw_offer_accepted', onDrawOfferAccepted)
   //sio.on('draw_offer_declined', onDrawOfferDeclined)
 
-  $('#search_game_form').on('submit', function(e) {
-    e.preventDefault()
-
-    if ($('#search_game_form').prop('inSearch')) {
-      cancelSearch()
-    } else {
-      searchGame()
-    }
-  })
   /*
   $('#message_form').on('submit', function(e) {
     e.preventDefault(
@@ -530,12 +541,12 @@
   function pushToMovesList(move, indx) {
     $movesList.find('.halfmove').removeClass('halfmove-active')
     if (indx % 2 == 0) {
-      $movesList.append(`<div class="row move">
-                          <div id="move_${indx}"
-                               class="col halfmove halfmove-active">
+      $movesList.append(`<div class='row move'>
+                          <div id='move_${indx}'
+                               class='col halfmove halfmove-active'>
                             ${move}
                           </div>
-                          <div class="col"></div>
+                          <div class='col'></div>
                          </div>`)
     } else {
       var $moveCell = $movesList.children().last().children().last()
@@ -566,4 +577,26 @@
     highlightLastMove()
     moveSound.play()
   })
+
+  $('#new_game_btn').on('click', function(e) {
+    e.preventDefault()
+    sio.emit('search_game', {game_id: game_id})
+    $('#cancel_search_btn').css('display', 'block')
+    $('#new_game_btn').css('display', 'none')
+  })
+
+  $('#cancel_search_btn').on('click', function(e) {
+    e.preventDefault()
+    sio.emit('cancel_search')
+    $('#new_game_btn').css('display', 'block')
+    $('#cancel_search_btn').css('display', 'none')
+  })
+
+  //Stop search, if modal is closed.
+  $('#game_results_modal').on('hide.bs.modal', function() {
+    // Means, that we're in search.
+    if ($('#cancel_game_btn').css('display') !== 'none') {
+      sio.emit('cancel_search')
+    }
+  });
 })()

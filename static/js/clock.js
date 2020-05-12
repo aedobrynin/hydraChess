@@ -64,6 +64,13 @@ class Clock {
 }
 
 
+class Timer extends Clock {
+  redraw() {
+    document.getElementById(this.domId).innerHTML = this.seconds
+  }
+}
+
+
 class ClockPair {
   constructor(domIds, seconds=0) {
     if (!Array.isArray(domIds) || domIds.length !== 2) {

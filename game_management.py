@@ -400,7 +400,7 @@ def end_game(game_id: int, result: str, reason:str, update_stats=True) -> None:
     if game.black_time_is_up_task_id:
         revoke(game.black_time_is_up_task_id)
 
-    data = {'reason': reason}
+    data = {'result': result, 'reason': reason}
     sio.emit('game_ended', data, room=game.white_user.sid)
     sio.emit('game_ended', data, room=game.black_user.sid)
 
@@ -470,10 +470,6 @@ def send_message(game_id: int, sender: str, message: str):
 @celery.task(name="on_first_move_timed_out", ignore_result=True)
 def on_first_move_timed_out(game_id: int) -> None:
     """Interrupts game because of user didn't make first move for too long"""
-    game = Game.get(game_id)
-
-    color_to_move = game.fen.split()[1]
-
     end_game.delay(game_id, "-", 'Game cancelled', update_stats=False)
 
 
@@ -624,6 +620,7 @@ def search_game(user_id: int, seconds: int) -> None:
 
                 game = Game(white_user=user,
                             black_user=user_to_play_with,
+                            total_clock=seconds,
                             white_clock=seconds,
                             black_clock=seconds,
                             white_rating=user.rating,

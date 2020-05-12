@@ -56,6 +56,7 @@ class Game(rom.Model):
     moves = rom.Text(default="")
     last_move_datetime = rom.DateTime()
 
+    total_clock = rom.Integer()
     white_clock = rom.Integer()
     black_clock = rom.Integer()
 
