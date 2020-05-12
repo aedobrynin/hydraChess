@@ -11,7 +11,7 @@
     var word = "minute"
     if (minutes !== 1)
       word += 's'
-    $minutesInfo.html(`${minutes} ${word}`)
+    $minutesInfo.html(`<b>${minutes} ${word}</b>`)
   })
 
   if (localStorage.lastGameTimeValue) {
@@ -33,13 +33,13 @@
     sio.emit('search_game', {minutes: gameTime})
     $slider.attr('disabled', true)
     $findGameBtn.css('display', 'none')
-    $stopSearchBtn.css('display', '')
+    $stopSearchBtn.css('display', 'block')
   }
 
   function cancelSearch() {
     sio.emit('cancel_search')
     $slider.attr('disabled', false)
-    $findGameBtn.css('display', '')
+    $findGameBtn.css('display', 'block')
     $stopSearchBtn.css('display', 'none')
   }
 

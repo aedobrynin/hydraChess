@@ -581,7 +581,7 @@
   $('#new_game_btn').on('click', function(e) {
     e.preventDefault()
     sio.emit('search_game', {game_id: game_id})
-    $('#cancel_search_btn').css('display', 'block')
+    $('#stop_search_btn').css('display', 'block')
     $('#new_game_btn').css('display', 'none')
   })
 
@@ -589,13 +589,13 @@
     e.preventDefault()
     sio.emit('cancel_search')
     $('#new_game_btn').css('display', 'block')
-    $('#cancel_search_btn').css('display', 'none')
+    $('#stop_search_btn').css('display', 'none')
   })
 
   //Stop search, if modal is closed.
   $('#game_results_modal').on('hide.bs.modal', function() {
     // Means, that we're in search.
-    if ($('#cancel_game_btn').css('display') !== 'none') {
+    if ($('#stop_game_btn').css('display') !== 'none') {
       sio.emit('cancel_search')
     }
   });
