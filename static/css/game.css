@@ -6,6 +6,20 @@
   font-weight: bold;
 }
 
+#result {
+  background-color: white;
+  height: 25px;
+  display: none;
+  margin-bottom: 1px;
+  padding-left: 3px;
+  font-size: 13px;
+}
+
+#new_game_btn {
+  height: 50px;
+  display: none;
+}
+
 #resign_btn {
   color: white;
   font-weight: bold;
@@ -44,22 +58,33 @@
 
 
 #moves_list {
-  width: 250px;
-  height: 150px;
+  width: 300px;
+  height: 75px;
   background-color: white;
   overflow-y: hidden;
+  margin-top: 1px;
+  margin-bottom: 1px;
 }
 
 
-.move {
+.player-info {
+  background-color: white;
+  width: 300px;
   height: 30px;
+  padding-left: 5px;
+  line-height: 30px;
+};
+
+.move {
+  height: 25px;
 }
 
 .halfmove {
+  height: 25px;
 }
 
 .halfmove-active {
-  background-color: red;
+  background-color: red !important;
 }
 
 .halfmove:hover {

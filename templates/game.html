@@ -11,38 +11,17 @@
         href='{{ url_for('static', filename='css/game.css') }}'>
 </head>
 <body class='d-flex flex-row justify-content-center align-items-center'>
-  <div id='board' class='fluid-container bg-light'></div>
+  <div id='board' class='fluid-container'></div>
   <div id='right_container' class='rounded ml-2'>
     <div id='clock_a' class='clock'></div>
+    <div id='info_a' class='player-info'></div>
     <div id='moves_list' class='container'></div>
+    <button id='new_game_btn' class='btn'></button>
+    <div id='result'></div>
+    <div id='info_b' class='player-info'></div>
     <div id='clock_b' class='clock'></div>
     </div>
   </div>
-  <audio id='game_started_sound'>
-    <source src='{{ url_for('static', filename='sounds/game_started.mp3') }}'>
-  </audio>
-  <audio id='move_sound'>
-    <source src='{{ url_for('static', filename='sounds/move.mp3') }}'>
-  </audio>
-  <audio id='game_ended_sound'>
-    <source src='{{ url_for('static', filename='sounds/game_ended.mp3') }}'>
-  </audio>
-  <audio id='draw_offer_sound'>
-    <source src='{{ url_for('static', filename='sounds/draw_offer.mp3') }}'>
-  </audio>
-
-	<form id='search_game_form' class='col pt-2 pb-2 px-1'>
-		<select class='form-control' id='search_game_time'>
-			<option value='1'>1 minute</option>
-			<option value='3'>3 minutes</option>
-			<option value='5'>5 minutes</option>
-			<option value='10'>10 minutes</option>
-		</select>
-		<div id='search_spinner' class='spinner w-100 d-none'></div>
-		<button type='submit' id='search_game_btn' class='btn mt-2 w-100'>
-			Search game
-		</button>
-	</form>
 <body>
 {% endblock %}
 

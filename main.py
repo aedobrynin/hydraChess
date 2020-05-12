@@ -162,12 +162,19 @@ def on_connect(*args, **kwargs) -> None:
     if isinstance(game_id, int):
         game = Game.get(game_id)
 
-    if not game and current_user.is_authenticated:
+    if current_user.is_authenticated:
         cur_user = User.get(current_user.id)
         with EntityLock(cur_user, 10, 10):
             cur_user.sid = request.sid
             cur_user.save()
-        return
+
+        if not game:
+            if cur_user.cur_game_id:
+                sio.emit('redirect',
+                         {'url': f'/game/{cur_user.cur_game_id}'},
+                         room=cur_user.sid,
+                         )
+            return
 
     is_player = current_user.is_authenticated and\
             current_user.id in (game.white_user.id, game.black_user.id)
@@ -179,10 +186,6 @@ def on_connect(*args, **kwargs) -> None:
     #   info and join him to the game room.
 
     if is_player and not game.is_finished:
-        cur_user = User.get(current_user.id)
-        with EntityLock(cur_user, 10, 10):
-           cur_user.sid = request.sid
-           cur_user.save()
         game_management.reconnect.delay(current_user.id, game_id)
     elif game.is_finished:
         game_management.send_game_info.delay(game_id, request.sid, is_player)

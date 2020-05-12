@@ -44,11 +44,14 @@ class Game(rom.Model):
     white_user = rom.OneToOne("User", 'no action')
     black_user = rom.OneToOne("User", 'no action')
 
+    white_rating = rom.Integer()  # White rating before the game was played.
+    black_rating = rom.Integer()  # Black rating before the game was played.
     fen = rom.Text()
 
     is_started = rom.Boolean(default=False)
     is_finished = rom.Boolean(default=False)
     result = rom.Text(default='*')
+    result_reason = rom.Text(default="")
 
     moves = rom.Text(default="")
     last_move_datetime = rom.DateTime()

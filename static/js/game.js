@@ -55,6 +55,14 @@
   })
   /* -- SOUNDS -- */
 
+  function setPlayersInfo(info_a, info_b) {
+    $container_a = $('#info_a')
+    $container_b = $('#info_b')
+
+    $container_a.html(`${info_a.nickname} (${info_a.rating})`)
+    $container_b.html(`${info_b.nickname} (${info_b.rating})`)
+  }
+
   /* -- CHAT RELATED FUNCTIONS -- */
 
   /*
@@ -166,18 +174,25 @@
       clockPair.show()
       game_finished = false
     }
-    else
-      game_finished = true
+    else {
+      //$movesList.height(125)
+      $movesList.css('margin-bottom', '0')
+      $('#result').css('display', 'block')
+      $('#result').html(`${data.result_reason}`)
 
+      game_finished = true
+    }
 
     if (data.is_player) {
       color = data.color
       if (color === 'w') {
         board.orientation('white')
+        setPlayersInfo(data.black_user, data.white_user)
       } else {
         if (data.result === undefined)
           clockPair.rotate()
         board.orientation('black')
+        setPlayersInfo(data.white_user, data.black_user)
       }
     }
 
@@ -231,6 +246,8 @@
  }
 
   function onGameEnded(data) {
+    console.log(data)
+    /*
     $('#message_input').prop('readonly', true)
     $('#search_game_form').prop('inSearch', false)
     $('#search_game_time').removeClass('d-none')
@@ -240,11 +257,23 @@
 
     $('#search_game_form').removeClass('d-none')
     $('#game_state_buttons').addClass('d-none')
+    */
 
     //removeTimer('first_move_timer')
     //removeTimer('opp_disconnected_timer')
 
     clockPair.stop()
+
+    // Show"New game" button, if we played in this game.
+    if (color !== null) {
+      $('#new_game_btn').css('display', '')
+    }
+    // Show game result.
+    $('#moves_list').css('margin-bottom', '0')
+    $('#result').css('display', 'block')
+    $('#result').html(`${data.reason}`)
+
+
 
     /*
     var result = data.result
@@ -450,7 +479,7 @@
       board.position(game.fen())
       $moveCell = $movesList.find(`#move_${moveIndx}`)
       $moveCell.addClass('halfmove-active')
-			$movesList.scrollTop(Math.max(0, Math.trunc(moveIndx / 2) - 4) * $moveCell.height())
+			$movesList.scrollTop(Math.max(0, Math.trunc(moveIndx / 2) - 2) * $moveCell.height())
 
       moveSound.play()
 

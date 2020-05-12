@@ -24,10 +24,10 @@ def send_game_info(game_id: int, room_id: int, is_player):
     #  rating_changes = get_rating_changes(game_id)
 
     data = {
-        "black_nickname": game.black_user.login,
-        "black_rating": game.black_user.rating,
-        "white_nickname": game.white_user.login,
-        "white_rating": game.white_user.rating,
+        "black_user": {"nickname": game.black_user.login,
+                       "rating": game.black_rating},
+        "white_user": {"nickname": game.white_user.login,
+                       "rating": game.white_rating},
         "moves": game.moves,
         "is_player": is_player
         }
@@ -51,6 +51,7 @@ def send_game_info(game_id: int, room_id: int, is_player):
             data["can_send_draw_offer"] = not game.draw_offer_try_this_move
     else:
         data["result"] = game.result
+        data['result_reason'] = game.result_reason
 
     sio.emit('game_started', data, room=room_id)
 
@@ -181,7 +182,15 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
 
         result = board.result()
         if result != '*':
-            end_game.delay(game_id, result)
+            reason: str
+            if result == '1/2-1/2':
+                reason = "Draw"
+            elif result == '1-0':
+                reason = "Checkmate. White won."
+            else:
+                reason = "Checkmate. Black won."
+
+            end_game.delay(game_id, result, reason)
     except ValueError:
         pass
 
@@ -193,11 +202,16 @@ def resign(user_id: int, game_id: int) -> None:
 
     user_white = user_id == game.white_user.id
 
-    result = "0-1" if user_white else "1-0"
-    reason_white = "You've resigned" if user_white else "Opponent resigned"
-    reason_black = "Opponent resigned" if user_white else "You've resigned"
+    result: str
+    reason: str
+    if user_white:
+        result = "0-1"
+        reason = "White resigned. Black won."
+    else:
+        result = "1-0"
+        reason = "Black resigned. White won."
 
-    end_game.delay(game_id, result, reason_white, reason_black)
+    end_game.delay(game_id, result, reason)
 
 
 @celery.task(name="reconnect", ignore_result=True)
@@ -344,7 +358,7 @@ def accept_draw_offer(user_id: int, game_id: int):
             sio.emit('draw_offer_accepted', room=opp_sid)
             game.draw_offer_sender = None
             game.save()
-            end_game.delay(game_id, "1/2-1/2")
+            end_game.delay(game_id, "1/2-1/2", "Draw.")
 
 
 @celery.task(name='decline_draw_offer', ignore_result=True)
@@ -361,10 +375,7 @@ def decline_draw_offer(user_id: int, game_id: int):
 
 
 @celery.task(name='end_game', ignore_result=True)
-def end_game(game_id: int, result: str,
-             reason_white: str = '',
-             reason_black: str = '',
-             update_stats=True) -> None:
+def end_game(game_id: int, result: str, reason:str, update_stats=True) -> None:
     '''Marks game as finished, emits 'game_ended' signal to users,
      closes the room,
      recalculates ratings and k-factors if update_stats is True'''
@@ -389,26 +400,14 @@ def end_game(game_id: int, result: str,
     if game.black_time_is_up_task_id:
         revoke(game.black_time_is_up_task_id)
 
-    results = {'1-0': ('won', 'lost'),
-               '1/2-1/2': ('draw', 'draw'),
-               '0-1': ('lost', 'won'),
-               '-': ('interrupted', 'interrupted')}
-
-    result_white, result_black = results[result]
-
-    sio.emit('game_ended',
-             {'result': result_white,
-              'reason': reason_white},
-             room=game.white_user.sid)
-    sio.emit('game_ended',
-             {'result': result_black,
-              'reason': reason_black},
-             room=game.black_user.sid)
+    data = {'reason': reason}
+    sio.emit('game_ended', data, room=game.white_user.sid)
+    sio.emit('game_ended', data, room=game.black_user.sid)
 
     with rom.util.EntityLock(game, 10, 10):
         game.is_finished = 1
         game.result = result
-
+        game.result_reason = reason
         with rom.util.EntityLock(game.white_user, 10, 10):
             game.white_user.cur_game_id = None
             game.white_user.save()
@@ -475,13 +474,7 @@ def on_first_move_timed_out(game_id: int) -> None:
 
     color_to_move = game.fen.split()[1]
 
-    reason_white = "You didn't make the first move"
-    reason_black = "Your opponent didn't make the first move"
-    if color_to_move == 'b':
-        reason_white, reason_black = reason_black, reason_white
-
-    end_game.delay(game_id, "-", reason_white, reason_black,
-                   update_stats=False)
+    end_game.delay(game_id, "-", 'Game cancelled', update_stats=False)
 
 
 @celery.task(name="on_disconnect_timed_out", ignore_results=True)
@@ -489,14 +482,18 @@ def on_disconnect_timed_out(user_id: int, game_id: int) -> None:
     """Interrupts game because of user being disconnected for too long"""
     game = Game.get(game_id)
 
-    result = "1-0"
-    reason_white = "Opponent was disconnected too long"
-    reason_black = "You was disconnected too long"
-    if user_id == game.white_user.id:
-        result = "0-1"
-        reason_white, reason_black = reason_black, reason_white
+    is_user_white = user_id == game.white_user.id
 
-    end_game(game_id, result, reason_white, reason_black)
+    result: str
+    reason: str
+    if is_user_white:
+        result = "0-1"
+        reason = "White player disconnected. Black won."
+    else:
+        result = "1-0"
+        reason = "Black player disconnected. White won."
+
+    end_game(game_id, result, reason)
 
 
 @celery.task(name="on_time_is_up", ignore_results=True)
@@ -509,27 +506,25 @@ def on_time_is_up(user_id: int, game_id: int) -> None:
     is_user_white = user_id == game.white_user.id
 
     result: str
-    reason_white: str
-    reason_black: str
+    reason: str
     # Finish game with draw if other player has insufficient material to win
     if (is_user_white and board.has_insufficient_material(chess.BLACK)) or\
        (not is_user_white and board.has_insufficient_material(chess.WHITE)):
         result = "1/2-1/2"
-        reason_white = ("Opponent's time is up, "
-                        "but you have an insufficient material")
-        reason_black = ("Your time is up, "
-                        "but opponent has an insufficient material")
+
         if user_id == game.white_user.id:
-            reason_white, reason_black = reason_black, reason_white
+            reason = "White's time is up. Draw due to insufficient material."
+        else:
+            reason = "Black's time is up. Draw due to insufficient material."
     else:
-        result = "1-0"
-        reason_white = "Opponent's time is up"
-        reason_black = "Your time is up"
         if user_id == game.white_user.id:
             result = "0-1"
-            reason_white, reason_black = reason_black, reason_white
+            reason = "White's time is up"
+        else:
+            result = "1-0"
+            reason = "Black's time is up"
 
-    end_game.delay(game_id, result, reason_white, reason_black)
+    end_game.delay(game_id, result, reason)
 
 
 class RatingChange:
@@ -631,6 +626,8 @@ def search_game(user_id: int, seconds: int) -> None:
                             black_user=user_to_play_with,
                             white_clock=seconds,
                             black_clock=seconds,
+                            white_rating=user.rating,
+                            black_rating=user_to_play_with.rating,
                             is_started=0)
                 game.save()
 
