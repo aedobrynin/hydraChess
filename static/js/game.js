@@ -6,6 +6,9 @@
   var game = null
   var game_finished = null
 
+  var rating
+  var ratingChanges = null
+
   var $movesList = $('#moves_list')
   var movesArray = null
   var moveIndx = null
@@ -209,14 +212,17 @@
     if (data.is_player) {
       color = data.color
       if (color === 'w') {
+        rating = data['white_user']['rating']
         board.orientation('white')
         setPlayersInfo(data.black_user, data.white_user)
       } else {
         if (data.result === undefined)
           clockPair.rotate()
+        rating = data['black_user']['rating']
         board.orientation('black')
         setPlayersInfo(data.white_user, data.black_user)
       }
+      ratingChanges = data.rating_changes
     }
 
     if (data.result !== undefined) {
@@ -286,21 +292,34 @@
     $('#game_state_buttons').addClass('d-none')
     */
 
+    clockPair.stop()
+    setResults(data.result)
+
+    if (color === null) return // Do not do next things, If we are spectators.
     $firstMoveAlert.hide()
     firstMoveTimer.stop()
 
     $oppDisconnectedAlert.hide()
     oppDisconnectedTimer.stop()
 
-    clockPair.stop()
-    setResults(data.result)
-
-    // If we played in this game. Offer to start new game.
-    if (color !== null) {
-      $('#new_game_btn').css('display', 'block')
+    // Calculate ratingDelta for modal
+    var ratingDelta = ratingChanges['draw']
+    if (color === 'w') {
+      if (data.result === '1-0')
+        ratingDelta = ratingChanges['win']
+      else if (data.result === '0-1')
+        ratingDelta = ratingChanges['lose']
+    } else {
+      if (data.result === '1-0')
+        ratingDelta = ratingChanges['lose']
+      else if (data.result === '0-1')
+        ratingDelta = ratingChanges['win']
     }
+    if (ratingDelta > 0) ratingDelta = '+' + ratingDelta
+    rating += parseInt(ratingDelta)
 
-    // Show modal
+    $('#game_results_container')
+      .append(`${data.reason}<br />Your new rating: ${rating} (${ratingDelta})`)
     $('#game_results_modal').modal('show')
 
     /*
@@ -318,10 +337,10 @@
     if (ratingDelta) {
       updateRating()
     }
-
-    playGameEndedSound()
     declineDrawOfferLocally()
     */
+
+    gameEndedSound.play()
     game_finished = true
   }
 
@@ -381,11 +400,14 @@
   }
   */
   function updateBoardSize() {
-    var viewportWidth = window.innerWidth - $('#right_container').width()
+    var viewportWidth = window.innerWidth
     var viewportHeight = window.innerHeight
 
-    var containerSize = Math.floor(Math.min(viewportWidth / 10 * 8,
-                                            viewportHeight / 10 * 8))
+    var containerSize = Math.floor(
+      Math.min((viewportWidth - $('#right_container').width()) / 10 * 8,
+                viewportHeight / 10 * 8)
+    )
+
     containerSize -= containerSize % 8 - 1
     $board.width(containerSize)
     $board.height(containerSize)
@@ -396,7 +418,7 @@
   // should be called before EVERY animation
   function blockAnimation() {
     animation = true;
-    setTimeout(function() { animation = false}, config.moveSpeed);
+    setTimeout(function() { animation = false}, config.moveSpeed + 30);
   }
 
   var config = {

@@ -48,10 +48,11 @@ def send_game_info(game_id: int, room_id: int, is_player):
         data["black_clock"] = int(black_clock.total_seconds())
         data["white_clock"] = int(white_clock.total_seconds())
         if is_player:
+            rating_changes = get_rating_changes(game_id)
             data["can_send_draw_offer"] = not game.draw_offer_try_this_move
+            data['rating_changes'] = rating_changes[data['color']].to_dict()
     else:
         data["result"] = game.result
-        data['result_reason'] = game.result_reason
 
     sio.emit('game_started', data, room=room_id)
 
@@ -400,14 +401,16 @@ def end_game(game_id: int, result: str, reason:str, update_stats=True) -> None:
     if game.black_time_is_up_task_id:
         revoke(game.black_time_is_up_task_id)
 
-    data = {'result': result, 'reason': reason}
+    data = {'result': result}
+    sio.emit('game_ended', data, room=game_id) # Emit to spectators
+
+    data['reason'] = reason
     sio.emit('game_ended', data, room=game.white_user.sid)
     sio.emit('game_ended', data, room=game.black_user.sid)
 
     with rom.util.EntityLock(game, 10, 10):
         game.is_finished = 1
         game.result = result
-        game.result_reason = reason
         with rom.util.EntityLock(game.white_user, 10, 10):
             game.white_user.cur_game_id = None
             game.white_user.save()
