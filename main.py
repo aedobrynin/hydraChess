@@ -3,11 +3,11 @@ monkey.patch_all()
 
 from flask import Flask, request
 from flask import render_template, redirect
-from flask_socketio import SocketIO, disconnect
+from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 from rom.util import EntityLock
-from models import User
+from models import User, Game
 from forms import RegisterForm, LoginForm
 import game_management
 
@@ -40,14 +40,27 @@ def load_user(user_id: int) -> User:
 @app.route('/', methods=['GET'])
 def index():
     if current_user.is_authenticated:
-        return redirect('/play')
-    return render_template('index.html', title="Hydra Chess")
+        return redirect('/lobby')
+    return render_template('index.html', title='Hydra Chess')
 
 
-@app.route('/play', methods=['GET'])
+@app.route('/lobby', methods=['GET'])
 @login_required
-def play():
-    return render_template('play.html', title="Play chess")
+def lobby():
+    return render_template('lobby.html', title='Lobby - Hydra Chess')
+
+
+@app.route('/game/<int:game_id>', methods=['GET'])
+def game_page(game_id: int):
+    game = Game.get(game_id)
+    if not game:
+        return render_template('404.html'), 404
+
+    is_player = current_user.is_authenticated and\
+        current_user.id in (game.white_user.id, game.black_user.id)
+
+    return render_template('game.html', title='Game - Hydra chess',
+                           is_player=is_player)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -95,12 +108,22 @@ def on_search_game(*args, **kwargs):
         print("Bad arguments")
         return
 
+    # If valid minutes value provided, create game request with it.
+    # If valid game_id provided, create game request with the same game time as
+    # the game.
     minutes = args[0].get('minutes', None)
-    if isinstance(minutes, int) is False or minutes not in [1, 3, 5, 10]:
-        print("Bad arguments")
-        return
+    if isinstance(minutes, int) is False or\
+            minutes not in (1, 2, 3, 5, 10, 20, 30, 60):
+        try:
+            game_id = args[0].get('game_id', None)
+            game = Game.get(game_id)
+            if not game:
+                return
+            minutes = game.total_clock // 60
+        except (ValueError, TypeError):
+            return
 
-    game_management.search_game.delay(current_user.id, minutes)
+    game_management.search_game.delay(current_user.id, minutes * 60)
 
 
 @sio.on('cancel_search')
@@ -118,10 +141,12 @@ def on_resign(*args, **kwargs) -> None:
     game_management.resign.delay(current_user.id, current_user.cur_game_id)
 
 
+# TODO
+'''
 @sio.on('send_message')
 @authenticated_only
 def on_send_message(*args, **kwargs) -> None:
-    """Sends message to game chat"""
+    """Sends message to game chat. Currently disabled."""
     if not current_user.cur_game_id:
         return
 
@@ -131,17 +156,52 @@ def on_send_message(*args, **kwargs) -> None:
             game_management.send_message.delay(current_user.cur_game_id,
                                                sender=current_user.login,
                                                message=message)
+'''
 
 
 @sio.on('connect')
-@authenticated_only
 def on_connect(*args, **kwargs) -> None:
-    cur_user = User.get(current_user.id)
-    with EntityLock(cur_user, 10, 10):
-        cur_user.sid = request.sid
-        cur_user.save()
+    game_id = request.args.get('game_id')
+    game = None
+    try:
+        game_id = int(game_id)
+    except (ValueError, TypeError):
+        pass
 
-    game_management.on_connect.delay(current_user.id)
+    if isinstance(game_id, int):
+        game = Game.get(game_id)
+
+    if current_user.is_authenticated:
+        cur_user = User.get(current_user.id)
+        with EntityLock(cur_user, 10, 10):
+            cur_user.sid = request.sid
+            cur_user.save()
+
+        if not game:
+            if cur_user.cur_game_id:
+                sio.emit('redirect',
+                         {'url': f'/game/{cur_user.cur_game_id}'},
+                         room=cur_user.sid,
+                         )
+            return
+
+    is_player = current_user.is_authenticated and\
+        current_user.id in (game.white_user.id, game.black_user.id)
+
+    #  If the user is player and game isn't finished, we update user sid and
+    #   reconnect him to the game.
+    #  If the game is finished, we only send game info to the user.
+    #  If the game isn't finished and user isn't player, we send him the game
+    #   info and join him to the game room.
+
+    if is_player and not game.is_finished:
+        game_management.reconnect.delay(current_user.id, game_id)
+    elif game.is_finished:
+        game_management.send_game_info.delay(game_id, request.sid, is_player)
+        # TODO: disconnect here
+    else:
+        game_management.send_game_info.delay(game_id, request.sid, False)
+        join_room(game_id)
 
 
 @sio.on('make_draw_offer')
@@ -172,15 +232,15 @@ def on_disconnect(*args, **kwargs) -> None:
 @sio.on('make_move')
 @authenticated_only
 def on_make_move(*args, **kwargs):
-    game_id = current_user.cur_game_id
-
-    if game_id is None:
-        return
-
     if args and isinstance(args[0], dict):
         user_id = current_user.id
-        san = args[0].get("san")
-        if san:
+        san = args[0].get('san')
+        game_id = args[0].get('game_id')
+        try:
+            game_id = int(game_id)
+        except (TypeError, ValueError):
+            return
+        if san and game_id:
             game_management.make_move.delay(user_id, game_id, san)
 
 
@@ -194,6 +254,11 @@ def logout():
 @app.login_manager.unauthorized_handler
 def unauth_handler():
     return redirect('/')
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
 
 
 if __name__ == '__main__':

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<head>
+  <link rel='stylesheet'
+        href='https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css'
+        integrity='sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU'
+        crossorigin='anonymous'>
+  <link rel='stylesheet'
+        type='text/css'
+        href='{{ url_for('static', filename='css/game.css') }}'>
+</head>
+<body class='d-flex flex-row justify-content-center align-items-center'>
+  <div id='board' class='fluid-container'></div>
+  <div id='buttons_container' class='rounded-right'>
+    <button id='draw_btn' class='btn game-btn m-0 p-0'>Draw</button>
+    <hr class='mx-auto my-1' style='width: 50px'>
+    <button id='resign_btn' class='btn game-btn m-0 p-0'>Resign</button>
+  </div>
+  <div id='right_container' class='rounded ml-2'>
+    <div id='clock_a' class='clock'></div>
+    <div id='info_a' class='player-info'></div>
+    <div id='moves_list' class='container'></div>
+    <div id='info_b' class='player-info'></div>
+    <div id='clock_b' class='clock'></div>
+  </div>
+
+  <!-- Modal -->
+  <div id="game_results_modal" class="modal fade" id="modal" tabindex="-1"
+       role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document"
+         style="width: 300px">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title mx-auto">Game over</h5>
+        </div>
+        <div id='game_results_container' class="modal-body text-center"></div>
+        <div class="modal-footer">
+          <button id="new_game_btn"
+                  type="button"
+                  class="btn btn-primary w-100">New game</button>
+          <button id="stop_search_btn"
+                  type="button"
+                  class="btn btn-secondary w-100">Stop search</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id='first_move_alert' class="alert alert-warning collapse notification"
+       role="alert">
+    The game will be canceled, if you won't make first move in
+      <span id='first_move_seconds'></span> seconds.
+  </div>
+  <div id='opp_disconnected_alert'
+       class="alert alert-warning collapse notification"
+       role='alert'>
+    Opponent disconnected. You'll win in
+    <span id='reconnect_wait_seconds'></span> seconds.
+  </div>
+<body>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src='https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js'
+        integrity='sha256-eqQw3yuTEYSQQIUa3vMMTeSfbIzv24BkWkJi8flcRF8='
+        crossorigin='anonymous'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js'
+        integrity='sha256-bQmrZe4yPnQrLTY+1gYylfNMBuGfnT/HKsCGX+9Xuqo='
+        crossorigin='anonymous'></script>
+<script src='https://cdn.jsdelivr.net/gh/hashlib/chessboardjs@1.0.3/lib/chessboard.js'
+        integrity='sha256-ELb20mWb4zB+aE0+0GyqWwZGKndC3QYl155hOJe/hVk='
+        crossorigin='anonymous'></script>
+<script src='https://cdn.jsdelivr.net/npm/howler@2.1.3/dist/howler.min.js'
+        integrity='sha256-/Q4ZPy6sMbk627wHxuaWSIXS1y7D2KnMhsm/+od7ptE='
+        crossorigin='anonymous'></script>
+<script src='{{ url_for('static', filename='js/clock.js') }}'></script>
+<script src='{{ url_for('static', filename='js/game.js') }}'></script>
+{% endblock %}
