@@ -54,11 +54,11 @@ class Clock {
   }
 
   hide() {
-    document.getElementById(this.domId).style.visibility = 'hidden'
+    $(`#${this.domId}`).css('display', 'none')
   }
 
   show() {
-    document.getElementById(this.domId).style.visibility = ''
+    $(`#${this.domId}`).css('display', 'block')
   }
 }
 

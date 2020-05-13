@@ -177,8 +177,6 @@ return
   }
 
   function onGameStarted(data) {
-    console.log(data)
-
     if (data.moves !== '') {
       movesArray = data.moves.split(',')
     }    else {
@@ -234,7 +232,7 @@ return
       setResults(data.result)
     }
 
-    if (board.orientation() == 'white') {
+    if (board.orientation() === 'white') {
         setPlayersInfo(data.black_user, data.white_user)
     } else {
         setPlayersInfo(data.white_user, data.black_user)
@@ -244,11 +242,11 @@ return
     if (!(getFullmoveNumber() === 1 && game.turn() === 'w')) {
       clockPair.start()
     }
+
+    updateBoardSize()
  }
 
   function onGameUpdated(data) {
-    console.log(data)
-
     clockPair.setTimes(data.black_clock, data.white_clock)
 
     // There won't be animation, because we already updated board position
@@ -275,7 +273,6 @@ return
  }
 
   function onGameEnded(data) {
-    console.log(data)
     /*
     $('#message_input').prop('readonly', true)
     */
@@ -366,14 +363,50 @@ return
     $('#draw_btn').removeClass('bg-warning')
   }
 
+  function checkOrientation() {
+    var viewportWidth = window.innerWidth
+    var viewportHeight = window.innerHeight
+
+    // Ignore quite large devices
+    if (Math.min(viewportWidth, viewportHeight) >= 550) {
+      return
+    }
+
+    if (viewportHeight > viewportWidth) {
+      alert('Please, use the landscape mode') // TODO: something beautiful
+    }
+  }
+
   function updateBoardSize() {
     var viewportWidth = window.innerWidth
     var viewportHeight = window.innerHeight
 
-    var containerSize = Math.floor(
-      Math.min((viewportWidth - $('#right_container').width()) / 10 * 8,
-                viewportHeight / 10 * 8)
-    )
+    var containerSize
+    if (viewportWidth < 992) {
+      $('#moves_list').css('display', 'none')
+      $('#info_a').css('display', 'none')
+      $('#info_b').css('display', 'none')
+
+      if ($('#clock_a').css('display') === 'none') {
+        containerSize = Math.floor(
+          Math.min(viewportWidth / 10 * 8, viewportHeight / 10 * 8)
+        )
+      } else {
+        containerSize = Math.floor(
+          Math.min((viewportWidth - $('#clock_a').width()) / 10 * 8,
+                    viewportHeight / 10 * 8)
+        )
+      }
+    } else {
+      $('#moves_list').css('display', 'block')
+      $('#info_a').css('display', 'block')
+      $('#info_b').css('display', 'block')
+
+      containerSize = Math.floor(
+        Math.min((viewportWidth - $('#right_container').width()) / 10 * 8,
+                  viewportHeight / 10 * 8)
+      )
+    }
 
     containerSize -= containerSize % 8 - 1
     $board.width(containerSize)
@@ -411,6 +444,9 @@ return
       $('#search_game_time').val(localStorage.lastGameTimeValue)
     }
   })
+
+  $(window).on('load', checkOrientation)
+  $(window).resize(checkOrientation)
 
   $(window).on('load', updateBoardSize)
   $(window).resize(updateBoardSize)
