@@ -233,16 +233,7 @@ def reconnect(user_id: int, game_id: int) -> None:
 
     game = Game.get(game_id)
 
-    black_clock = timedelta(seconds=game.black_clock)
-    white_clock = timedelta(seconds=game.white_clock)
-
     color_to_move = game.fen.split()[1]
-
-    if game.last_move_datetime:
-        if color_to_move == 'w':
-            white_clock -= datetime.utcnow() - game.last_move_datetime
-        else:
-            black_clock -= datetime.utcnow() - game.last_move_datetime
 
     is_user_white = user_id == game.white_user.id
 
