@@ -26,7 +26,6 @@
 
   /* -- GAME INFO RELATED FUNCTIONS -- */
   function getFullmoveNumber() {
-    if (game == null) return 0
     var fen = game.fen()
     var fullmoveNumber = parseInt(fen.split(' ')[5])
     return fullmoveNumber
@@ -120,9 +119,9 @@
   }
 
   function highlightLastMove() {
-    if (game === null || moveIndx < 0)      {
-return
-}
+    if (game === null || moveIndx < 0) {
+      return
+    }
 
     var move = game.undo()
     game.move(move)
@@ -147,7 +146,6 @@ return
   }
 
   function onDrop(source, target) {
-    if (game == null) return 'snapback'
     if (color !== game.turn()) return 'snapback'
 
     var move = game.move({
@@ -326,9 +324,9 @@ ratingDelta = ratingChanges['lose']
 
   function onOppDisconnected(data) {
     // In order to do not make overlapping alerts.
-    if ($firstMoveAlert.css('display') !== 'none')      {
-return
-}
+    if ($firstMoveAlert.css('display') !== 'none') {
+      return
+    }
 
     var waitTime = data.wait_time
 

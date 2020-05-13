@@ -45,11 +45,15 @@ class Clock {
   }
 
   update() {
-    if (this.work === false || this.seconds === 0)      { return }
+    if (this.work === false || this.seconds === 0) {
+      return
+    }
+
     this.seconds -= 1
     this.redraw()
-    if (this.seconds !== 0)      {
- setTimeout(function() { this.update() }.bind(this), 1000)
+    if (this.seconds !== 0) {
+      setTimeout(function() { this.update() }.bind(this), 1000)
+    }
 }
   }
 
@@ -110,9 +114,9 @@ class ClockPair {
   }
 
   setRotation(rotation) {
-    if (rotation === this.rotated)      {
-return
-}
+    if (rotation === this.rotated) {
+      return
+    }
     this.rotate()
   }
 
@@ -138,14 +142,14 @@ return
   }
 
   hide() {
-    for (let clock of this.clocks)      {
-clock.hide()
-}
+    for (let clock of this.clocks) {
+      clock.hide()
+    }
   }
 
   show() {
-    for (let clock of this.clocks)      {
-clock.show()
-}
+    for (let clock of this.clocks) {
+      clock.show()
+    }
   }
 }

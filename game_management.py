@@ -474,7 +474,7 @@ def send_message(game_id: int, sender: str, message: str):
 @celery.task(name="on_first_move_timed_out", ignore_result=True)
 def on_first_move_timed_out(game_id: int) -> None:
     """Interrupts game because of user didn't make first move for too long"""
-    end_game.delay(game_id, "-", 'Game cancelled', update_stats=False)
+    end_game.delay(game_id, "-", 'Game cancelled.', update_stats=False)
 
 
 @celery.task(name="on_disconnect_timed_out", ignore_results=True)

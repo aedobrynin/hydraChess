@@ -236,6 +236,10 @@ def on_make_move(*args, **kwargs):
         user_id = current_user.id
         san = args[0].get('san')
         game_id = args[0].get('game_id')
+        try:
+            game_id = int(game_id)
+        except (TypeError, ValueError):
+            return
         if san and game_id:
             game_management.make_move.delay(user_id, game_id, san)
 
