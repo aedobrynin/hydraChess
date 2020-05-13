@@ -54,7 +54,6 @@ class Clock {
     if (this.seconds !== 0) {
       setTimeout(function() { this.update() }.bind(this), 1000)
     }
-}
   }
 
   hide() {
