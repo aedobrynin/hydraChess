@@ -51,13 +51,13 @@ def lobby():
 
 
 @app.route('/game/<int:game_id>', methods=['GET'])
-def game(game_id: int):
+def game_page(game_id: int):
     game = Game.get(game_id)
     if not game:
         return render_template('404.html'), 404
 
     is_player = current_user.is_authenticated and\
-            current_user.id in (game.white_user.id, game.black_user.id)
+        current_user.id in (game.white_user.id, game.black_user.id)
 
     return render_template('game.html', title='Game - Hydra chess',
                            is_player=is_player)
@@ -145,7 +145,6 @@ def on_resign(*args, **kwargs) -> None:
 @authenticated_only
 def on_send_message(*args, **kwargs) -> None:
     """Sends message to game chat. Currently disabled."""
-    return  # TODO
     '''
     if not current_user.cur_game_id:
         return
@@ -156,7 +155,7 @@ def on_send_message(*args, **kwargs) -> None:
             game_management.send_message.delay(current_user.cur_game_id,
                                                sender=current_user.login,
                                                message=message)
-    '''
+    '''  # TODO
 
 
 @sio.on('connect')
@@ -186,7 +185,7 @@ def on_connect(*args, **kwargs) -> None:
             return
 
     is_player = current_user.is_authenticated and\
-            current_user.id in (game.white_user.id, game.black_user.id)
+        current_user.id in (game.white_user.id, game.black_user.id)
 
     #  If the user is player and game isn't finished, we update user sid and
     #   reconnect him to the game.

@@ -4,7 +4,7 @@
   var color = null
 
   var game = null
-  var game_finished = null
+  var gameFinished = null
 
   var rating
   var ratingChanges = null
@@ -68,13 +68,14 @@
   })
   /* -- SOUNDS -- */
 
-  function setPlayersInfo(info_a, info_b) {
-    $('#info_a').html(`${info_a.nickname} (${info_a.rating})`)
-    $('#info_b').html(`${info_b.nickname} (${info_b.rating})`)
+  function setPlayersInfo(infoA, infoB) {
+    $('#infoA').html(`${infoA.nickname} (${infoA.rating})`)
+    $('#infoB').html(`${infoB.nickname} (${infoB.rating})`)
   }
 
   function setResults(result) {
-    var whiteResult = null, blackResult = null
+    var whiteResult = null
+    var blackResult = null
     if (result === '1-0') {
       whiteResult = 'won'
       blackResult = 'lost'
@@ -119,8 +120,9 @@
   }
 
   function highlightLastMove() {
-    if (game === null || moveIndx < 0)
-      return
+    if (game === null || moveIndx < 0)      {
+return
+}
 
     var move = game.undo()
     game.move(move)
@@ -137,7 +139,7 @@
 
   /* -- HIGHLIGHTS RELATED FUNCTIONS -- */
   function onDragStart(source, piece, position, orientation) {
-    if (game_finished || color !== piece[0]) return false
+    if (gameFinished || color !== piece[0]) return false
     if (moveIndx + 1 !== movesArray.length) {
       moveToEnd()
       return false
@@ -169,7 +171,7 @@
 
     game.undo()
 
-    sio.emit('make_move', {'san': move.san, 'game_id': game_id})
+    sio.emit('make_move', {'san': move.san, 'game_id': gameId})
 
     declineDrawOfferLocally()
   }
@@ -179,15 +181,14 @@
 
     if (data.moves !== '') {
       movesArray = data.moves.split(',')
-    }
-    else {
+    }    else {
       movesArray = []
     }
 
     moveIndx = movesArray.length - 1
 
     game = new Chess()
-    movesArray.forEach(function (move, index) {
+    movesArray.forEach(function(move, index) {
       pushToMovesList(move, index)
       game.move(move)
     })
@@ -200,13 +201,13 @@
     if (data.result === undefined) {
       gameStartedSound.play()
       clockPair.setTimes(data.black_clock, data.white_clock)
-      if (game.turn() === 'w' && getFullmoveNumber() !== 1)
-        clockPair.setWorkingClock(1)
+      if (game.turn() === 'w' && getFullmoveNumber() !== 1)        {
+clockPair.setWorkingClock(1)
+}
       clockPair.show()
-      game_finished = false
-    }
-    else {
-      game_finished = true
+      gameFinished = false
+    }    else {
+      gameFinished = true
     }
 
     if (data.is_player) {
@@ -216,8 +217,7 @@
         board.orientation('white')
         setPlayersInfo(data.black_user, data.white_user)
       } else {
-        if (data.result === undefined)
-          clockPair.rotate()
+        if (data.result === undefined)          { clockPair.rotate() }
         rating = data['black_user']['rating']
         board.orientation('black')
         setPlayersInfo(data.white_user, data.black_user)
@@ -249,8 +249,9 @@
 
     // There won't be animation, because we already updated board position
     // before. animation = true will block moveToEnd() call.
-    if (game.turn() === color)
-      animation = false
+    if (game.turn() === color)      {
+animation = false
+}
 
     movesArray.push(data.san)
     pushToMovesList(data.san, moveIndx + 1)
@@ -288,19 +289,19 @@
     oppDisconnectedTimer.stop()
 
     // Calculate ratingDelta for modal
-    var ratingDelta = 0;
-    if (data.result === '1/2-1/2')
-      ratingDelta = ratingChanges['draw']
-    else if (color === 'w') {
-      if (data.result === '1-0')
-        ratingDelta = ratingChanges['win']
-      else if (data.result === '0-1')
-        ratingDelta = ratingChanges['lose']
+    var ratingDelta = 0
+    if (data.result === '1/2-1/2')      {
+ ratingDelta = ratingChanges['draw']
+}    else if (color === 'w') {
+      if (data.result === '1-0')        {
+ratingDelta = ratingChanges['win']
+}      else if (data.result === '0-1')        {
+ratingDelta = ratingChanges['lose']
+}
     } else {
-      if (data.result === '1-0')
-        ratingDelta = ratingChanges['lose']
-      else if (data.result === '0-1')
-        ratingDelta = ratingChanges['win']
+      if (data.result === '1-0')        {
+ratingDelta = ratingChanges['lose']
+}      else if (data.result === '0-1')        { ratingDelta = ratingChanges['win'] }
     }
     if (ratingDelta > 0) ratingDelta = '+' + ratingDelta
     rating += parseInt(ratingDelta)
@@ -310,7 +311,7 @@
     $('#game_results_modal').modal('show')
 
     gameEndedSound.play()
-    game_finished = true
+    gameFinished = true
   }
 
   function onFirstMoveWaiting(data) {
@@ -324,8 +325,9 @@
 
   function onOppDisconnected(data) {
     // In order to do not make overlapping alerts.
-    if ($firstMoveAlert.css('display') !== 'none')
-      return
+    if ($firstMoveAlert.css('display') !== 'none')      {
+return
+}
 
     var waitTime = data.wait_time
 
@@ -382,8 +384,8 @@
 
   // should be called before EVERY animation
   function blockAnimation() {
-    animation = true;
-    setTimeout(function() { animation = false}, config.moveSpeed + 30);
+    animation = true
+    setTimeout(function() { animation = false }, config.moveSpeed + 30)
   }
 
   var config = {
@@ -410,12 +412,12 @@
   $(window).resize(updateBoardSize)
 
   var href = window.location.href
-  var game_id = href.slice(href.lastIndexOf('/') + 1)
+  var gameId = href.slice(href.lastIndexOf('/') + 1)
 
   var sio = io({
     transports: ['websocket'],
     upgrade: false,
-    query: {game_id: game_id},
+    query: {game_id: gameId}
   })
 
   sio.on('game_started', onGameStarted)
@@ -424,13 +426,13 @@
   sio.on('redirect', function(data) {
     window.location.href = data.url
   })
-  //sio.on('get_message', onGetMessage)
+  // sio.on('get_message', onGetMessage)
   sio.on('first_move_waiting', onFirstMoveWaiting)
   sio.on('opp_disconnected', onOppDisconnected)
   sio.on('opp_reconnected', onOppReconnected)
   sio.on('draw_offer', onDrawOffer)
-  //sio.on('draw_offer_accepted', onDrawOfferAccepted)
-  //sio.on('draw_offer_declined', onDrawOfferDeclined)
+  // sio.on('draw_offer_accepted', onDrawOfferAccepted)
+  // sio.on('draw_offer_declined', onDrawOfferDeclined)
 
   /*
   $('#message_form').on('submit', function(e) {
@@ -457,9 +459,9 @@
       moveIndx -= 1
       game.undo()
       board.position(game.fen())
-			$moveCell = $movesList.find(`#move_${moveIndx}`)
+      var $moveCell = $movesList.find(`#move_${moveIndx}`)
       $moveCell.addClass('halfmove-active')
-			$movesList.scrollTop(Math.trunc(moveIndx / 2) * $moveCell.height())
+      $movesList.scrollTop(Math.trunc(moveIndx / 2) * $moveCell.height())
 
       moveSound.play()
 
@@ -474,9 +476,12 @@
       moveIndx += 1
       game.move(movesArray[moveIndx])
       board.position(game.fen())
-      $moveCell = $movesList.find(`#move_${moveIndx}`)
+      var $moveCell = $movesList.find(`#move_${moveIndx}`)
       $moveCell.addClass('halfmove-active')
-			$movesList.scrollTop(Math.max(0, Math.trunc(moveIndx / 2) - 2) * $moveCell.height())
+      $movesList.scrollTop(Math.max(
+        0,
+        Math.trunc(moveIndx / 2) - 2
+      ) * $moveCell.height())
 
       moveSound.play()
 
@@ -489,7 +494,7 @@
     if (moveIndx !== -1 && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       moveIndx = -1
-      game.reset();
+      game.reset()
       board.position(game.fen())
       $movesList.scrollTop(0)
 
@@ -522,11 +527,11 @@
     else if (e.keyCode === 39) moveForward()  // right arrow
     else if (e.keyCode === 38) moveToBegin()  // up arrow
     else if (e.keyCode === 40) moveToEnd()  // down arrow
-  });
+  })
 
   function pushToMovesList(move, indx) {
     $movesList.find('.halfmove').removeClass('halfmove-active')
-    if (indx % 2 == 0) {
+    if (indx % 2 === 0) {
       $movesList.append(`<div class='row move'>
                           <div id='move_${indx}'
                                class='col halfmove halfmove-active'>
@@ -545,9 +550,8 @@
 
   $('body').on('click', '.halfmove', function() {
     $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
-    newMoveIndx = parseInt(this.id.slice(5))
-    if (newMoveIndx === moveIndx)
-      return
+    var newMoveIndx = parseInt(this.id.slice(5))
+    if (newMoveIndx === moveIndx)      { return }
 
     while (newMoveIndx < moveIndx) {
       moveIndx -= 1
@@ -566,7 +570,7 @@
 
   $('#new_game_btn').on('click', function(e) {
     e.preventDefault()
-    sio.emit('search_game', {game_id: game_id})
+    sio.emit('search_game', {game_id: gameId})
     $('#stop_search_btn').css('display', 'block')
     $('#new_game_btn').css('display', 'none')
   })
@@ -578,11 +582,11 @@
     $('#stop_search_btn').css('display', 'none')
   })
 
-  //Stop search, if modal is closed.
+  // Stop search, if modal is closed.
   $('#game_results_modal').on('hide.bs.modal', function() {
     // Means, that we're in search.
     if ($('#stop_game_btn').css('display') !== 'none') {
       sio.emit('cancel_search')
     }
-  });
+  })
 })()

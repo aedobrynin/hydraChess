@@ -25,9 +25,8 @@ CELERY_ROUTES = {
     'on_first_move_timed_out': {'queue': 'normal'},
     'on_disconnect_timed_out': {'queue': 'normal'},
     'on_time_is_up': {'queue': 'normal'},
-    'on_connect': {'queue': 'normal'},
     # -- LOW PRIORITY QUEUE -- #
-    'send_message': {'queue': 'low'},
+    # 'send_message': {'queue': 'low'},
     'update_k_factor': {'queue': 'low'},
     'on_disconnect': {'queue': 'low'},
     'update_rating': {'queue': 'low'},

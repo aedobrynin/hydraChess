@@ -1,23 +1,24 @@
 ;(function() {
-  var sliderValues = [1, 2, 3, 5, 10, 20, 30, 60];
+  var sliderValues = [1, 2, 3, 5, 10, 20, 30, 60]
 
-  var $slider = $('#slider_minutes'),
-      $minutesInfo = $('#minutes_info'),
-      $findGameBtn = $('#find_game_btn'),
-      $stopSearchBtn = $('#stop_search_btn');
+  var $slider = $('#slider_minutes')
+  var $minutesInfo = $('#minutes_info')
+  var $findGameBtn = $('#find_game_btn')
+  var $stopSearchBtn = $('#stop_search_btn')
 
-  $slider.on('input', function(){
+  $slider.on('input', function() {
     var minutes = sliderValues[this.value]
-    var word = "minute"
-    if (minutes !== 1)
-      word += 's'
+    var word = 'minute'
+    if (minutes !== 1)      {
+ word += 's'
+}
     $minutesInfo.html(`<b>${minutes} ${word}</b>`)
   })
 
   if (localStorage.lastGameTimeValue) {
     $slider.val(localStorage.lastGameTimeValue)
   }
-  $slider.trigger('input');
+  $slider.trigger('input')
 
   var sio = io({
     transports: ['websocket'],

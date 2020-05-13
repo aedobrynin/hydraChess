@@ -355,8 +355,8 @@ def accept_draw_offer(user_id: int, game_id: int):
 
     with rom.util.EntityLock(game, 10, 10):
         if game.draw_offer_sender and game.draw_offer_sender != user_id:
-            opp_sid = User.get(game.draw_offer_sender).sid
-            #sio.emit('draw_offer_accepted', room=opp_sid)
+            # opp_sid = User.get(game.draw_offer_sender).sid
+            # sio.emit('draw_offer_accepted', room=opp_sid)
             game.draw_offer_sender = None
             game.save()
             end_game.delay(game_id, "1/2-1/2", "Draw.")
@@ -369,14 +369,15 @@ def decline_draw_offer(user_id: int, game_id: int):
 
     with rom.util.EntityLock(game, 10, 10):
         if game.draw_offer_sender and game.draw_offer_sender != user_id:
-            opp_sid = User.get(game.draw_offer_sender).sid
-            #sio.emit('draw_offer_declined', room=opp_sid)
+            # opp_sid = User.get(game.draw_offer_sender).sid
+            # sio.emit('draw_offer_declined', room=opp_sid)
             game.draw_offer_sender = None
             game.save()
 
 
 @celery.task(name='end_game', ignore_result=True)
-def end_game(game_id: int, result: str, reason: str, update_stats=True) -> None:
+def end_game(game_id: int, result: str,
+             reason: str, update_stats=True) -> None:
     '''Marks game as finished, emits 'game_ended' signal to users,
      closes the room,
      recalculates ratings and k-factors if update_stats is True'''
@@ -402,7 +403,7 @@ def end_game(game_id: int, result: str, reason: str, update_stats=True) -> None:
         revoke(game.black_time_is_up_task_id)
 
     data = {'result': result}
-    sio.emit('game_ended', data, room=game_id) # Emit to spectators
+    sio.emit('game_ended', data, room=game_id)  # Emit to spectators
 
     data['reason'] = reason
     sio.emit('game_ended', data, room=game.white_user.sid)
@@ -456,8 +457,7 @@ def end_game(game_id: int, result: str, reason: str, update_stats=True) -> None:
 
 @celery.task(name="send_message", ignore_result=True)
 def send_message(game_id: int, sender: str, message: str):
-    '''Send chat message to game players. Currently disabled.'''
-    return  # TODO
+    '''Send chat message to game players. Currently disabled.'''# TODO
     '''
     game = Game.get(game_id)
 

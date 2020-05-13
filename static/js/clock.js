@@ -3,9 +3,8 @@ function addLeadingZero(value) {
   return value.toString()
 }
 
-
 class Clock {
-  constructor(domId, seconds=0) {
+  constructor(domId, seconds = 0) {
     this.domId = domId
     this.work = false
     this.setTime(seconds)
@@ -30,7 +29,7 @@ class Clock {
   }
 
   start() {
-    this.work = true;
+    this.work = true
     this.update()
   }
 
@@ -46,23 +45,22 @@ class Clock {
   }
 
   update() {
-    if (this.work === false || this.seconds === 0)
-      return
+    if (this.work === false || this.seconds === 0)      { return }
     this.seconds -= 1
     this.redraw()
-    if (this.seconds !== 0)
-      setTimeout(function() { this.update() }.bind(this) , 1000);
+    if (this.seconds !== 0)      {
+ setTimeout(function() { this.update() }.bind(this), 1000)
+}
   }
 
   hide() {
-    document.getElementById(this.domId).style.visibility = "hidden"
+    document.getElementById(this.domId).style.visibility = 'hidden'
   }
 
   show() {
-    document.getElementById(this.domId).style.visibility = ""
+    document.getElementById(this.domId).style.visibility = ''
   }
 }
-
 
 class Timer extends Clock {
   redraw() {
@@ -70,11 +68,10 @@ class Timer extends Clock {
   }
 }
 
-
 class ClockPair {
-  constructor(domIds, seconds=0) {
+  constructor(domIds, seconds = 0) {
     if (!Array.isArray(domIds) || domIds.length !== 2) {
-      alert("Bad domIds for ClockPair instance")
+      alert('Bad domIds for ClockPair instance')
       return
     }
     this.clocks = [new Clock(domIds[0], seconds), new Clock(domIds[1], seconds)]
@@ -84,15 +81,15 @@ class ClockPair {
   }
 
   setTime(clockIndx, seconds) {
-    if (!Number.isInteger(clockIndx) || !(0 <= clockIndx && clockIndx <= 1)) {
+    if (!Number.isInteger(clockIndx) || !(clockIndx >= 0 && clockIndx <= 1)) {
       alert(`Bad clock index '${clockIndx}' for setTime in ClockPair instance`)
     }
     this.clocks[clockIndx].setTime(seconds)
   }
 
-  setTimes(time_a, time_b) {
-    this.clocks[0].setTime(time_a)
-    this.clocks[1].setTime(time_b)
+  setTimes(timeA, timeB) {
+    this.clocks[0].setTime(timeA)
+    this.clocks[1].setTime(timeB)
   }
 
   setWorkingClock(workingClock) {
@@ -105,7 +102,7 @@ class ClockPair {
   }
 
   rotate() {
-    this.rotated = !this.rotated;
+    this.rotated = !this.rotated
     var domIdA = this.clocks[0].domId
     var domIdB = this.clocks[1].domId
     this.clocks[0].setDomId(domIdB)
@@ -113,8 +110,9 @@ class ClockPair {
   }
 
   setRotation(rotation) {
-    if (rotation === this.rotated)
-      return
+    if (rotation === this.rotated)      {
+return
+}
     this.rotate()
   }
 
@@ -140,12 +138,14 @@ class ClockPair {
   }
 
   hide() {
-    for (let clock of this.clocks)
-      clock.hide()
+    for (let clock of this.clocks)      {
+clock.hide()
+}
   }
 
   show() {
-    for (let clock of this.clocks)
-      clock.show()
+    for (let clock of this.clocks)      {
+clock.show()
+}
   }
 }
