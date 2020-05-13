@@ -13,6 +13,23 @@
   display: none;
 }
 
+#buttons_container {
+  display: none;
+  position: absolute;
+  background-color: white;
+}
+
+.game-btn {
+  height: 20px;
+  width: 70px;
+  line-height: 15px;
+}
+
+.game-btn:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .notification {
   position: fixed;
   bottom: 5px;
@@ -41,6 +58,8 @@
   line-height: 60px;
   height: 60px;
   background-color: #4F473D;
+  margin-right: 0px;
+  padding-right: 0px;
 }
 
 #moves_list {

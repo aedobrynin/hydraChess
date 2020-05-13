@@ -356,7 +356,7 @@ def accept_draw_offer(user_id: int, game_id: int):
     with rom.util.EntityLock(game, 10, 10):
         if game.draw_offer_sender and game.draw_offer_sender != user_id:
             opp_sid = User.get(game.draw_offer_sender).sid
-            sio.emit('draw_offer_accepted', room=opp_sid)
+            #sio.emit('draw_offer_accepted', room=opp_sid)
             game.draw_offer_sender = None
             game.save()
             end_game.delay(game_id, "1/2-1/2", "Draw.")
@@ -370,13 +370,13 @@ def decline_draw_offer(user_id: int, game_id: int):
     with rom.util.EntityLock(game, 10, 10):
         if game.draw_offer_sender and game.draw_offer_sender != user_id:
             opp_sid = User.get(game.draw_offer_sender).sid
-            sio.emit('draw_offer_declined', room=opp_sid)
+            #sio.emit('draw_offer_declined', room=opp_sid)
             game.draw_offer_sender = None
             game.save()
 
 
 @celery.task(name='end_game', ignore_result=True)
-def end_game(game_id: int, result: str, reason:str, update_stats=True) -> None:
+def end_game(game_id: int, result: str, reason: str, update_stats=True) -> None:
     '''Marks game as finished, emits 'game_ended' signal to users,
      closes the room,
      recalculates ratings and k-factors if update_stats is True'''
@@ -518,10 +518,10 @@ def on_time_is_up(user_id: int, game_id: int) -> None:
     else:
         if user_id == game.white_user.id:
             result = "0-1"
-            reason = "White's time is up"
+            reason = "White's time is up."
         else:
             result = "1-0"
-            reason = "Black's time is up"
+            reason = "Black's time is up."
 
     end_game.delay(game_id, result, reason)
 

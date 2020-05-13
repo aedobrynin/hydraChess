@@ -170,7 +170,8 @@
     game.undo()
 
     sio.emit('make_move', {'san': move.san, 'game_id': game_id})
-    //declineDrawOfferLocally()
+
+    declineDrawOfferLocally()
   }
 
   function onGameStarted(data) {
@@ -196,9 +197,8 @@
 
     highlightLastMove()
 
-    gameStartedSound.play()
-
     if (data.result === undefined) {
+      gameStartedSound.play()
       clockPair.setTimes(data.black_clock, data.white_clock)
       if (game.turn() === 'w' && getFullmoveNumber() !== 1)
         clockPair.setWorkingClock(1)
@@ -223,6 +223,13 @@
         setPlayersInfo(data.white_user, data.black_user)
       }
       ratingChanges = data.rating_changes
+
+      // Show draw and resign buttons.
+      if (data.result === undefined) {
+        $('#buttons_container').css('display', 'block')
+        $('#draw_btn').prop('accept', false)
+        $('#draw_btn').prop('disabled', !data.can_send_draw_offer)
+      }
     }
 
     if (data.result !== undefined) {
@@ -233,23 +240,7 @@
     if (!(getFullmoveNumber() === 1 && game.turn() === 'w')) {
       clockPair.start()
     }
-    /*
-    ratingChanges = data.rating_changes
-    var oppNickname = data.opp_nickname
-    var oppRating = data.opp_rating
-    $('#opp_nickname').html(oppNickname)
-    $('#opp_rating').html(`(${oppRating})`)
-
-    $('#message_input').prop('readonly', false)
-
-    $('#search_game_form').addClass('d-none')
-    $('#game_state_buttons').removeClass('d-none')
-
-    $('#draw_btn').html('Offer a draw')
-    $('#draw_btn').prop('accept', false)
-    $('#draw_btn').prop('disabled', !data.can_send_draw_offer)
-    */
-  }
+ }
 
   function onGameUpdated(data) {
     console.log(data)
@@ -282,15 +273,9 @@
     console.log(data)
     /*
     $('#message_input').prop('readonly', true)
-    $('#search_game_form').prop('inSearch', false)
-    $('#search_game_time').removeClass('d-none')
-    $('#search_spinner').removeClass('d-flex')
-      .addClass('d-none justify-content-center')
-    $('#search_game_btn').html('Search game')
-
-    $('#search_game_form').removeClass('d-none')
-    $('#game_state_buttons').addClass('d-none')
     */
+
+    $('#buttons_container').css('display', 'none')
 
     clockPair.stop()
     setResults(data.result)
@@ -303,8 +288,10 @@
     oppDisconnectedTimer.stop()
 
     // Calculate ratingDelta for modal
-    var ratingDelta = ratingChanges['draw']
-    if (color === 'w') {
+    var ratingDelta = 0;
+    if (data.result === '1/2-1/2')
+      ratingDelta = ratingChanges['draw']
+    else if (color === 'w') {
       if (data.result === '1-0')
         ratingDelta = ratingChanges['win']
       else if (data.result === '0-1')
@@ -322,24 +309,6 @@
       .append(`${data.reason}<br />Your new rating: ${rating} (${ratingDelta})`)
     $('#game_results_modal').modal('show')
 
-    /*
-    var result = data.result
-    var reason = data.reason
-
-    var ratingDelta = null
-    if (result === 'won') ratingDelta = ratingChanges.win
-    else if (result === 'draw') ratingDelta = ratingChanges.draw
-    else if (result === 'lost') ratingDelta = ratingChanges.lose
-    else ratingDelta = 0
-
-    rating += ratingDelta
-
-    if (ratingDelta) {
-      updateRating()
-    }
-    declineDrawOfferLocally()
-    */
-
     gameEndedSound.play()
     game_finished = true
   }
@@ -351,7 +320,6 @@
     firstMoveTimer.setTime(waitTime)
     firstMoveTimer.start()
     $firstMoveAlert.fadeIn()
-    //addFirstMoveTimer(waitTime)
   }
 
   function onOppDisconnected(data) {
@@ -372,17 +340,10 @@
     oppDisconnectedTimer.stop()
   }
 
-  /*
   function onDrawOffer() {
     $('#draw_btn').prop('accept', true)
-    $('#draw_btn').html('Accept a draw offer')
+    $('#draw_btn').addClass('bg-warning')
     drawOfferSound.play()
-  }
-
-  function onDrawOfferAccepted() {
-  }
-
-  function onDrawOfferDeclined() {
   }
 
   function acceptDrawOffer() {
@@ -395,10 +356,10 @@
   }
 
   function declineDrawOfferLocally() {
-    $('#draw_btn').html('Offer a draw')
     $('#draw_btn').prop('accept', false)
+    $('#draw_btn').removeClass('bg-warning')
   }
-  */
+
   function updateBoardSize() {
     var viewportWidth = window.innerWidth
     var viewportHeight = window.innerHeight
@@ -413,6 +374,10 @@
     $board.height(containerSize)
     board.resize()
     highlightLastMove()
+
+    var boardPos = $board.position()
+    $('#buttons_container').css('top', boardPos.top + 30)
+    $('#buttons_container').css('left', boardPos.left + $board.width() + 3)
   }
 
   // should be called before EVERY animation
@@ -463,7 +428,7 @@
   sio.on('first_move_waiting', onFirstMoveWaiting)
   sio.on('opp_disconnected', onOppDisconnected)
   sio.on('opp_reconnected', onOppReconnected)
-  //sio.on('draw_offer', onDrawOffer)
+  sio.on('draw_offer', onDrawOffer)
   //sio.on('draw_offer_accepted', onDrawOfferAccepted)
   //sio.on('draw_offer_declined', onDrawOfferDeclined)
 
@@ -472,7 +437,7 @@
     e.preventDefault(
     sendMessage()
   })
-
+  */
   $('#draw_btn').on('click', function(e) {
     var $btn = $('#draw_btn')
     if ($btn.prop('accept')) {
@@ -485,7 +450,6 @@
   $('#resign_btn').on('click', function(e) {
     sio.emit('resign')
   })
-  */
 
   function moveBack() {
     if (moveIndx >= 0 && !animation) {
