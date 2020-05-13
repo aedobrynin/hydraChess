@@ -177,9 +177,13 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
         data = {'san': move_san,
                 'black_clock': game.black_clock,
                 'white_clock': game.white_clock}
+
+        sio.emit('game_updated', data, room=game_id)
+        # DO NOT REMOVE NEXT STRING. SIO CAN'T EMIT TO SPECTATORS WITHOUT
+        # THIS :/
+        data = data
         sio.emit('game_updated', data, room=game.black_user.sid)
         sio.emit('game_updated', data, room=game.white_user.sid)
-        sio.emit('game_updated', data, room=game_id)
 
         result = board.result()
         if result != '*':
@@ -200,6 +204,11 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
 def resign(user_id: int, game_id: int) -> None:
     """Ends the game due to one player's resignation"""
     game = Game.get(game_id)
+
+    # If there is no moves in the game, just cancel it.
+    if not game.moves:
+        end_game.delay(game_id, '-', 'Game canceled.', update_stats=False)
+        return
 
     user_white = user_id == game.white_user.id
 
@@ -457,7 +466,7 @@ def end_game(game_id: int, result: str,
 
 @celery.task(name="send_message", ignore_result=True)
 def send_message(game_id: int, sender: str, message: str):
-    '''Send chat message to game players. Currently disabled.'''# TODO
+    '''Send chat message to game players. Currently disabled.'''  # TODO
     '''
     game = Game.get(game_id)
 

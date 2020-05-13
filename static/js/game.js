@@ -69,8 +69,8 @@
   /* -- SOUNDS -- */
 
   function setPlayersInfo(infoA, infoB) {
-    $('#infoA').html(`${infoA.nickname} (${infoA.rating})`)
-    $('#infoB').html(`${infoB.nickname} (${infoB.rating})`)
+    $('#info_a').html(`${infoA.nickname} (${infoA.rating})`)
+    $('#info_b').html(`${infoB.nickname} (${infoB.rating})`)
   }
 
   function setResults(result) {
@@ -201,9 +201,9 @@ return
     if (data.result === undefined) {
       gameStartedSound.play()
       clockPair.setTimes(data.black_clock, data.white_clock)
-      if (game.turn() === 'w' && getFullmoveNumber() !== 1)        {
-clockPair.setWorkingClock(1)
-}
+      if (game.turn() === 'w' && getFullmoveNumber() !== 1) {
+        clockPair.setWorkingClock(1)
+      }
       clockPair.show()
       gameFinished = false
     }    else {
@@ -215,12 +215,10 @@ clockPair.setWorkingClock(1)
       if (color === 'w') {
         rating = data['white_user']['rating']
         board.orientation('white')
-        setPlayersInfo(data.black_user, data.white_user)
       } else {
         if (data.result === undefined)          { clockPair.rotate() }
         rating = data['black_user']['rating']
         board.orientation('black')
-        setPlayersInfo(data.white_user, data.black_user)
       }
       ratingChanges = data.rating_changes
 
@@ -236,6 +234,12 @@ clockPair.setWorkingClock(1)
       setResults(data.result)
     }
 
+    if (board.orientation() == 'white') {
+        setPlayersInfo(data.black_user, data.white_user)
+    } else {
+        setPlayersInfo(data.white_user, data.black_user)
+    }
+
     // If game is started, start clocks
     if (!(getFullmoveNumber() === 1 && game.turn() === 'w')) {
       clockPair.start()
@@ -249,9 +253,9 @@ clockPair.setWorkingClock(1)
 
     // There won't be animation, because we already updated board position
     // before. animation = true will block moveToEnd() call.
-    if (game.turn() === color)      {
-animation = false
-}
+    if (game.turn() === color) {
+      animation = false
+    }
 
     movesArray.push(data.san)
     pushToMovesList(data.san, moveIndx + 1)
@@ -575,7 +579,7 @@ return
     $('#new_game_btn').css('display', 'none')
   })
 
-  $('#cancel_search_btn').on('click', function(e) {
+  $('#stop_search_btn').on('click', function(e) {
     e.preventDefault()
     sio.emit('cancel_search')
     $('#new_game_btn').css('display', 'block')
