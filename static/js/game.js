@@ -226,14 +226,14 @@
       }
     }
 
-    if (data.result !== undefined) {
-      setResults(data.result)
-    }
-
     if (board.orientation() === 'white') {
         setPlayersInfo(data.black_user, data.white_user)
     } else {
         setPlayersInfo(data.white_user, data.black_user)
+    }
+
+    if (data.result !== undefined) {
+      setResults(data.result)
     }
 
     // If game is started, start clocks
