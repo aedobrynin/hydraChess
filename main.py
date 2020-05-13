@@ -141,11 +141,12 @@ def on_resign(*args, **kwargs) -> None:
     game_management.resign.delay(current_user.id, current_user.cur_game_id)
 
 
+# TODO
+'''
 @sio.on('send_message')
 @authenticated_only
 def on_send_message(*args, **kwargs) -> None:
     """Sends message to game chat. Currently disabled."""
-    '''
     if not current_user.cur_game_id:
         return
 
@@ -155,7 +156,7 @@ def on_send_message(*args, **kwargs) -> None:
             game_management.send_message.delay(current_user.cur_game_id,
                                                sender=current_user.login,
                                                message=message)
-    '''  # TODO
+'''
 
 
 @sio.on('connect')

@@ -17,7 +17,7 @@ celery = make_celery(app)
 
 
 @celery.task(name='send_game_info', ignore_result=True)
-def send_game_info(game_id: int, room_id: int, is_player):
+def send_game_info(game_id: int, room_id: int, is_player: bool):
     request_datetime = datetime.utcnow()
     game = Game.get(game_id)
 
@@ -464,10 +464,11 @@ def end_game(game_id: int, result: str,
     update_k_factor.delay(game.black_user.id)
 
 
+# TODO
+'''
 @celery.task(name="send_message", ignore_result=True)
 def send_message(game_id: int, sender: str, message: str):
-    '''Send chat message to game players. Currently disabled.'''  # TODO
-    '''
+    """Sends chat message to game players. Currently disabled."""
     game = Game.get(game_id)
 
     for sid in (game.white_user.sid, game.black_user.sid):
@@ -476,7 +477,7 @@ def send_message(game_id: int, sender: str, message: str):
                      {'sender': sender,
                       'message': message},
                      room=sid)
-    '''
+'''
 
 
 @celery.task(name="on_first_move_timed_out", ignore_result=True)
