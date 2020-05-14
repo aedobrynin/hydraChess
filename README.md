@@ -16,7 +16,7 @@ $ pip3 install -r requirements.txt
 ```
 **(Your env must be in "dev" directory in order to run everything using scripts)**
 
-2. Install rabbitmq-server
+2. Install Redis
 ```
 $ sudo apt install redis
 ```
