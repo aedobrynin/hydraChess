@@ -1,5 +1,6 @@
 .swp
 dev/
+dev_pypy/
 ngrok
 
 # Byte-compiled / optimized / DLL files
