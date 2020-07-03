@@ -9,7 +9,6 @@ Tested on Python 3.7.5 and Redis 5.0.5
 
 1. Create new python venv and install requirements.
 ```
-$ sudo apt install python3-venv python3-pip
 $ python3 -mvenv dev
 $ source dev/bin/activate
 $ pip3 install -r requirements.txt
@@ -24,9 +23,7 @@ $ sudo apt install redis
 ## Running
 **You can run everything using scripts if:**
 1. Your env is in "dev" directory
-2. You didn't changed root directory name (hydraChess) and scripts directory name (scripts).
-
-If there is something different in your project, you can change scripts or [run everything manually](https://github.com/hashlib/hydraChess/blob/4098e3d8cb26400804a283a9bb4bc3910b3bb656/README.md#running).
+2. You didn't changed scripts directory name (scripts).
 
 **You have 2 possible ways to run everything using scripts:**
 1. Run it in 5 separate terminals using ```scripts/run_all_gnome_terminal.sh```
