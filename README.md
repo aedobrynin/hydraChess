@@ -7,13 +7,18 @@ Tested on Python 3.7.5 and Redis 5.0.5
 
 ## Prerequisites
 
-1. Create new python venv and install requirements.
+1. Create new Python venv and install requirements.
 ```
 $ python3 -mvenv dev
 $ source dev/bin/activate
 $ pip3 install -r requirements.txt
 ```
-**(Your env must be in "dev" directory in order to run everything using scripts)**
+For PyPy
+```
+$ pypy3 -mvenv dev_pypy
+$ source dev_pypy/bin/activate
+$ pip3 install -r requirements_pypy.txt
+```
 
 2. Install Redis
 ```
@@ -22,12 +27,14 @@ $ sudo apt install redis
 
 ## Running
 **You can run everything using scripts if:**
-1. Your env is in "dev" directory
+1. Your env is in "dev" directory ("dev_pypy" for PyPy)
 2. You didn't changed scripts directory name (scripts).
 
 **You have 2 possible ways to run everything using scripts:**
 1. Run it in 5 separate terminals using ```scripts/run_all_gnome_terminal.sh```
 2. Run it in one tmux window using ```scripts/run_all_tmux.sh``` (tmux must be installed)
+
+Use ```scripts/run_all_gnome_terminal.sh pypy``` or ```scripts/run_all_tmux.sh pypy``` for PyPy.
 
 In tmux everything looks like this:
 ![tmux](https://user-images.githubusercontent.com/43320720/79076597-11313480-7d04-11ea-8d25-51568a28e69d.png)
