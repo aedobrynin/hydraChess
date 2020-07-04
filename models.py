@@ -1,16 +1,14 @@
 from werkzeug.security import generate_password_hash, check_password_hash
+from chess import Board, WHITE, BLACK
 from flask_login import UserMixin
-import redis
 import rom
 import rom.util
 
-rom.util.set_connection_settings(db=1)
+rom.util.set_connection_settings(db=0)
 rom.util.use_null_session()
 
 
 class User(rom.Model, UserMixin):
-    _conn = redis.Redis(db=2)
-
     id = rom.PrimaryKey(index=True)
 
     login = rom.Text(unique=True)
@@ -37,8 +35,6 @@ class User(rom.Model, UserMixin):
 
 
 class Game(rom.Model):
-    _conn = redis.Redis(db=3)
-
     id = rom.PrimaryKey(index=True)
 
     white_user = rom.OneToOne("User", 'no action')
@@ -46,7 +42,6 @@ class Game(rom.Model):
 
     white_rating = rom.Integer()  # White rating before the game was played.
     black_rating = rom.Integer()  # Black rating before the game was played.
-    fen = rom.Text()
 
     is_started = rom.Boolean(default=False)
     is_finished = rom.Boolean(default=False)
@@ -75,12 +70,27 @@ class Game(rom.Model):
     black_time_is_up_task_id = rom.Text()
 
     draw_offer_sender = rom.Integer(default=None)
-    draw_offer_try_this_move = rom.Boolean(default=False)
+
+    def get_moves_cnt(self):
+        if self.moves:
+            return self.moves.count(',') + 1
+        return 0
+
+    def get_next_to_move(self) -> str:
+        moves_cnt = self.get_moves_cnt()
+        if moves_cnt % 2 == 0:
+            return WHITE
+        return BLACK
+
+    def get_board(self) -> Board:
+        board = Board()
+        if self.moves:
+            for move in self.moves.split(','):
+                board.push_san(move)
+        return board
 
 
 class GameRequest(rom.Model):
-    _conn = redis.Redis(db=4)
-
     id = rom.PrimaryKey(index=True)
 
     time = rom.Float(index=True)

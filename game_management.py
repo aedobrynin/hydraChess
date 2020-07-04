@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Dict, Optional
-from math import ceil, floor
+from math import ceil
 import chess
 import rom
 from celery.task.control import revoke
@@ -21,8 +21,6 @@ def send_game_info(game_id: int, room_id: int, is_player: bool):
     request_datetime = datetime.utcnow()
     game = Game.get(game_id)
 
-    #  rating_changes = get_rating_changes(game_id)
-
     data = {
         "black_user": {"nickname": game.black_user.login,
                        "rating": game.black_rating},
@@ -39,8 +37,8 @@ def send_game_info(game_id: int, room_id: int, is_player: bool):
         black_clock = timedelta(seconds=game.black_clock)
         white_clock = timedelta(seconds=game.white_clock)
         if game.moves:
-            next_to_move = game.fen.split()[1]
-            if next_to_move == 'w':
+            next_to_move = game.get_next_to_move()
+            if next_to_move == chess.WHITE:
                 white_clock -= request_datetime - game.last_move_datetime
             else:
                 black_clock -= request_datetime - game.last_move_datetime
@@ -49,7 +47,10 @@ def send_game_info(game_id: int, room_id: int, is_player: bool):
         data["white_clock"] = int(white_clock.total_seconds())
         if is_player:
             rating_changes = get_rating_changes(game_id)
-            data["can_send_draw_offer"] = not game.draw_offer_try_this_move
+            if game.draw_offer_sender is None and game.get_moves_cnt() != 0:
+                data["can_send_draw_offer"] = True
+            else:
+                data["can_send_draw_offer"] = False
             data['rating_changes'] = rating_changes[data['color']].to_dict()
     else:
         data["result"] = game.result
@@ -59,14 +60,11 @@ def send_game_info(game_id: int, room_id: int, is_player: bool):
 
 @celery.task(name='start_game', ignore_result=True)
 def start_game(game_id: int) -> None:
-    '''Marks game as started.
-       Emits fen, pieces color, info about the opponent
-        and rating changes to players'''
-
+    '''Marks game as started, sends game info for players,
+    emits first_move_waiting signal to white player'''
     game = Game.get(game_id)
     with rom.util.EntityLock(game, 10, 10):
         game.is_started = 1
-        game.fen = chess.STARTING_FEN
 
         eta = datetime.utcnow() + timedelta(seconds=FIRST_MOVE_TIME_OUT)
         task = on_first_move_timed_out.apply_async(args=(game_id, ),
@@ -97,20 +95,16 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
             user_id not in (game.white_user.id, game.black_user.id):
         return
 
-    board = chess.Board(game.fen)
+    board = game.get_board()
     is_user_white = user_id == game.white_user.id
 
     if (is_user_white and board.turn == chess.BLACK) or\
        (not is_user_white and board.turn == chess.WHITE):
-        print(f"Wrong move side. User {User.get(user_id).login} "
-              f"plays {is_user_white} color, but now is {board.turn} "
-              f"turn. FEN: {game.fen}, move: {move_san}")
         return
 
     try:
         with rom.util.EntityLock(game, 10, 10):
             board.push_san(move_san)
-            game.fen = board.fen()
             game.moves += (',' if game.moves else '') + move_san
 
             if game.first_move_timed_out_task_id:
@@ -126,7 +120,7 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
                 # Decline draw offer only if it was asked by the opp
                 # This call is waiting because of an entity lock
                 decline_draw_offer.delay(user_id, game_id)
-            game.draw_offer_try_this_move = False
+                game.draw_offer_sender = None
 
             if is_user_white:
                 white_clock = timedelta(seconds=game.white_clock) -\
@@ -226,14 +220,12 @@ def resign(user_id: int, game_id: int) -> None:
 
 @celery.task(name="reconnect", ignore_result=True)
 def reconnect(user_id: int, game_id: int) -> None:
-    '''Emits fen, pieces color, info about the opponent and
-        rating changes to player.
-       Emits all info about timers (first move waiting, etc...)
-       Emits 'opp_reconnected' to the opponent.'''
+    '''Sends game info to reconnected player
+    Emits 'opp_reconnected' to the opponent.'''
 
     game = Game.get(game_id)
 
-    color_to_move = game.fen.split()[1]
+    next_to_move = game.get_next_to_move()
 
     is_user_white = user_id == game.white_user.id
 
@@ -262,13 +254,13 @@ def reconnect(user_id: int, game_id: int) -> None:
                  room=game.white_user.sid)
 
     if is_user_white:
-        if game.first_move_timed_out_task_id and color_to_move == 'w':
+        if game.first_move_timed_out_task_id and next_to_move == chess.WHITE:
             wait_time = (game.first_move_timed_out_task_eta -
                          datetime.utcnow()).seconds
             sio.emit('first_move_waiting',
                      {'wait_time': wait_time},
                      room=game.white_user.sid)
-    elif game.first_move_timed_out_task_id and color_to_move == 'b':
+    elif game.first_move_timed_out_task_id and next_to_move == chess.BLACK:
         wait_time = (game.first_move_timed_out_task_eta -
                      datetime.utcnow()).seconds
         sio.emit('first_move_waiting',
@@ -332,13 +324,15 @@ def make_draw_offer(user_id: int, game_id: int):
     game = Game.get(game_id)
 
     with rom.util.EntityLock(game, 10, 10):
+        if game.get_moves_cnt() == 0:
+            #  Do not make draw offer, if game isn't started.
+            return
         if game.draw_offer_sender and game.draw_offer_sender != user_id:
-            #  Accept draw offer if it's already exist
+            #  Accept draw offer, if it's already exist
             accept_draw_offer.delay(user_id, game_id)
-        elif game.draw_offer_try_this_move:
+        elif game.draw_offer_sender:
             return
 
-        game.draw_offer_try_this_move = True
         game.draw_offer_sender = user_id
         game.save()
 
@@ -501,7 +495,7 @@ def on_time_is_up(user_id: int, game_id: int) -> None:
     """Interrupts game because of user's time is up"""
     game = Game.get(game_id)
 
-    board = chess.Board(game.fen)
+    board = game.get_board()
 
     is_user_white = user_id == game.white_user.id
 
@@ -538,8 +532,8 @@ class RatingChange:
     def from_formula(k: int, e: float):
         '''Build up RatingChange object from ELO rating system formula'''
         win = ceil(k * (1 - e))
-        draw = floor(k * (0.5 - e))
-        lose = floor(k * (-e))
+        draw = ceil(k * (0.5 - e))
+        lose = ceil(k * (-e))
         return RatingChange(win, draw, lose)
 
     def to_dict(self):

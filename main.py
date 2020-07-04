@@ -19,7 +19,7 @@ app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-sio = SocketIO(app, message_queue="redis://localhost:6379/1")
+sio = SocketIO(app, message_queue="redis://localhost:6379/0")
 
 
 def authenticated_only(func):

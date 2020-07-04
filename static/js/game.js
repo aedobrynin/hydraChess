@@ -212,7 +212,9 @@
         rating = data['white_user']['rating']
         board.orientation('white')
       } else {
-        if (data.result === undefined)          { clockPair.rotate() }
+        if (data.result === undefined) {
+          clockPair.rotate()
+        }
         rating = data['black_user']['rating']
         board.orientation('black')
       }
