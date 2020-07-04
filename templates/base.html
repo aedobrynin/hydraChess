@@ -24,13 +24,14 @@
       <ul class="nav navbar-nav ml-auto">
         {% if current_user.is_authenticated %}
         <!-- This element are for not collapsed navbar -->
-        <li class="dropdown d-none d-md-block">
+         <li class="dropdown d-none d-md-block">
           <a class="nav-link dropdown-toggle" href="#" id="navbar_dropdown"
              role="button" data-toggle="dropdown" aria-haspopup="true"
              aria-expanded="false">{{current_user.login}}</a>
           <div class="dropdown-menu bg-dark" aria-labelledby="navbar_dropdown"
                style="min-width: 120px;">
-            <!-- <a class="dropdown-item text-white" href="#">Settings</a> -->
+            <a class="dropdown-item text-white" href="{{ url_for("user_profile", user_id=current_user.id) }}">Profile</a>
+            <a class="dropdown-item text-white" href="{{ url_for("settings") }}">Settings</a>
             <a class="dropdown-item text-white" href="{{ url_for("logout") }}">
               Logout</a>
           </div>
@@ -38,7 +39,8 @@
 
         <!-- This element are for collapsed navbar -->
         <li class="nav-item d-md-none">
-          <!-- <a class="nav-link" href="#">Settings</a> -->
+          <a class="nav-link" href="{{ url_for("user_profile", user_id=current_user.id) }}">Profile</a>
+          <a class="nav-link" href="{{ url_for("settings") }}">Settings</a>
           <a class="nav-link" href="{{ url_for("logout") }}">Logout</a>
         </li>
         {% else %}
@@ -52,7 +54,7 @@
         </li>
 
         <!-- This elements are for collapsed navbar -->
-        <li class="nav-item d-md-none">
+       <li class="nav-item d-md-none">
           <a class="nav-link" href="{{ url_for("register") }}">Register</a>
         </li>
         <li class="nav-item d-md-none">

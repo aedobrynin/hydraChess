@@ -1,6 +1,8 @@
 .swp
 dev/
 dev_pypy/
+static/img/profiles/*
+!static/img/profiles/default.jpg
 ngrok
 
 # Byte-compiled / optimized / DLL files

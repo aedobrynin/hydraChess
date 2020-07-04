@@ -27,6 +27,8 @@ class User(rom.Model, UserMixin):
 
     sid = rom.Text()
 
+    avatar_hash = rom.Text(default="default")
+
     def set_password(self, password: str) -> None:
         self.hashed_password = generate_password_hash(password)
 

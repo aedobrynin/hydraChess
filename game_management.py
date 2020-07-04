@@ -23,9 +23,11 @@ def send_game_info(game_id: int, room_id: int, is_player: bool):
 
     data = {
         "black_user": {"nickname": game.black_user.login,
-                       "rating": game.black_rating},
+                       "rating": game.black_rating,
+                       "id": game.black_user.id},
         "white_user": {"nickname": game.white_user.login,
-                       "rating": game.white_rating},
+                       "rating": game.white_rating,
+                       "id": game.white_user.id},
         "moves": game.moves,
         "is_player": is_player
         }

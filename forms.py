@@ -1,5 +1,8 @@
 import re
+import imghdr
+from io import BytesIO
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField,\
                     BooleanField, validators
 from wtforms.validators import StopValidation
@@ -24,6 +27,13 @@ def password_content_validator(form, field):
     if bad_char:
         raise StopValidation(message=("Only letters, digits and "
                                       "symbols are allowed"))
+
+
+def image_content_validator(form, field):
+    image = field.data
+    raw_img = BytesIO(image.read())
+    if imghdr.what(raw_img) is None:
+        raise StopValidation(message=("Can't read image data"))
 
 
 class RegisterForm(FlaskForm):
@@ -69,3 +79,12 @@ class LoginForm(FlaskForm):
 
     remember_me = BooleanField('Remember me')
     submit = SubmitField('Sign in')
+
+
+class SettingsForm(FlaskForm):
+    image = FileField('Profile image',
+                      validators=[FileRequired(),
+                                  FileAllowed(['jpg', 'png', 'jpeg'],
+                                              'Only .png, .jpg, .jpeg images are allowed'),
+                                  image_content_validator])
+    submit = SubmitField('Update settings')

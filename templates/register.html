@@ -6,40 +6,38 @@
     <h1 align='center'>Register</h1>
     {{ form.csrf_token }}
 
-    {{ form.login.label }}<br>
-    {{ form.login(class="form-control") }}<br>
+    <div class="form-group">
+      {{ form.login.label }}<br>
+      {{ form.login(class="form-control") }}
 
-    {% if form.login.errors %}
-    <div class="alert alert-danger" role="alert">
-      {{ form.login.errors[0] }}
+      {% if form.login.errors %}
+      <div class="m-0 p-0 mb-2 error-message">
+        {{ form.login.errors[0] }}
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
+    <div class="form-group">
+      {{ form.password.label }}<br>
+      {{ form.password(class="form-control",
+      type="password") }}
 
-    {{ form.password.label }}<br>
-    {{ form.password(class="form-control",
-    type="password") }}<br>
+      {% if form.password.errors %}
+      <div class="m-0 p-0 mb-2 error-message">
+        {{ form.password.errors[0] }}
+      </div>
+      {% endif %}
 
-    {% if form.password.errors %}
-    <div class="alert alert-danger" role="alert">
-      {{ form.password.errors[0] }}
+      {{ form.confirm_password.label }}<br>
+      {{ form.confirm_password(class="form-control", type="password") }}
+
+      {% if form.confirm_password.errors %}
+        <div class="m-0 p-0 mb-2 error-message">
+          {{ form.confirm_password.errors[0] }}
+        </div>
+      {% endif %}
     </div>
-    {% endif %}
-
-    {{ form.confirm_password.label }}<br>
-    {{ form.confirm_password(class="form-control",
-    type="password") }}<br>
-
-    {% if form.confirm_password.errors %}
-    <div class="alert alert-danger" role="alert">
-      {{ form.confirm_password.errors[0] }}
-    </div>
-    {% endif %}
-
     <div class="text-center">
-      {{ form.submit(type="submit",
-      class="btn w-100",
-      style="background-color: #5b636e;
-      color: white;") }}
+      {{ form.submit(type="submit", class="btn w-100 submit-button") }}
     </div>
   </form>
 </body>

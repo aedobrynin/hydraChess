@@ -3,6 +3,7 @@ body {
   background-color: #282e33;
 }
 
+
 form.basic-form {
   color: white;
   margin-left: auto;
@@ -11,6 +12,16 @@ form.basic-form {
   border-radius: 5px;
   padding: 10px;
   background-color: #343a40;
+}
+
+.submit-button {
+  background-color: #5b636e;
+  color: white;
+}
+
+.error-message {
+  font-weight: bold;
+  color: #ff2400;
 }
 
 @media only screen and (max-width: 768px) {

@@ -1,20 +1,26 @@
 from gevent import monkey
 monkey.patch_all()
 
-from flask import Flask, request
+import sys
+import uuid
+from io import BytesIO
+from PIL import Image
+from flask import Flask, request, url_for
 from flask import render_template, redirect
 from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 from rom.util import EntityLock
 from models import User, Game
-from forms import RegisterForm, LoginForm
+from forms import RegisterForm, LoginForm, SettingsForm
 import game_management
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'abacabadabacaba'
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024 #  4 Mb
+
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -76,7 +82,8 @@ def register():
         login_user(user)
         return redirect('/')
 
-    return render_template('register.html', title='Register', form=form)
+    return render_template('register.html', title='Register - Hydra Chess',
+            form=form)
 
 
 @app.route('/sign_in', methods=['GET', 'POST'])
@@ -90,11 +97,21 @@ def sign_in():
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
             return redirect("/")
-        return render_template('sign_in.html',
-                               title="Sign in",
-                               message="Wrong login or password",
-                               form=form)
+        return render_template('sign_in.html', title="Sign in - Hydra Chess",
+                message="Wrong password", form=form)
     return render_template('sign_in.html', title="Sign in", form=form)
+
+
+@app.route('/user/<int:user_id>', methods=['GET'])
+def user_profile(user_id: int):
+    user = User.get(user_id)
+    if not user:
+        return render_template('404.html'), 404
+    return render_template('user_profile.html',
+            title=f"{user.login}'s profile - Hydra Chess",
+            nickname=user.login,
+            rating=user.rating,
+            avatar_hash=user.avatar_hash)
 
 
 @sio.on('search_game')
@@ -242,6 +259,32 @@ def on_make_move(*args, **kwargs):
             return
         if san and game_id:
             game_management.make_move.delay(user_id, game_id, san)
+
+
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    form = SettingsForm()
+
+    message = ""
+    if form.validate_on_submit():
+        form.image.data.seek(0)  # Because the stream was already read on validation
+        raw_img = BytesIO(form.image.data.read())
+
+        img = Image.open(raw_img)
+        new_size = min(300, img.width), min(300, img.height)
+        img = img.resize(new_size).convert('RGB')
+
+        img_hash = uuid.uuid4().hex
+        path = sys.path[0] + url_for('static', filename=f'img/profiles/{img_hash}.jpg')
+        img.save(path)
+
+        current_user.avatar_hash = img_hash
+        current_user.save()
+        message = "Your settings were successfuly updated!"
+
+    return render_template('settings.html', title='Settings - Hydra Chess',
+            form=form, message=message)
 
 
 @app.route('/logout')
