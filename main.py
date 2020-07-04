@@ -19,7 +19,7 @@ import game_management
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'abacabadabacaba'
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
-app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024 #  4 Mb
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024  # 4 Mb
 
 
 login_manager = LoginManager()
@@ -83,7 +83,7 @@ def register():
         return redirect('/')
 
     return render_template('register.html', title='Register - Hydra Chess',
-            form=form)
+                           form=form)
 
 
 @app.route('/sign_in', methods=['GET', 'POST'])
@@ -98,7 +98,7 @@ def sign_in():
             login_user(user, remember=form.remember_me.data)
             return redirect("/")
         return render_template('sign_in.html', title="Sign in - Hydra Chess",
-                message="Wrong password", form=form)
+                               message="Wrong password", form=form)
     return render_template('sign_in.html', title="Sign in", form=form)
 
 
@@ -108,10 +108,10 @@ def user_profile(user_id: int):
     if not user:
         return render_template('404.html'), 404
     return render_template('user_profile.html',
-            title=f"{user.login}'s profile - Hydra Chess",
-            nickname=user.login,
-            rating=user.rating,
-            avatar_hash=user.avatar_hash)
+                           title=f"{user.login}'s profile - Hydra Chess",
+                           nickname=user.login,
+                           rating=user.rating,
+                           avatar_hash=user.avatar_hash)
 
 
 @sio.on('search_game')
@@ -276,7 +276,8 @@ def settings():
         img = img.resize(new_size).convert('RGB')
 
         img_hash = uuid.uuid4().hex
-        path = sys.path[0] + url_for('static', filename=f'img/profiles/{img_hash}.jpg')
+        path = sys.path[0] + \
+            url_for('static', filename=f'img/profiles/{img_hash}.jpg')
         img.save(path)
 
         current_user.avatar_hash = img_hash
@@ -284,7 +285,7 @@ def settings():
         message = "Your settings were successfuly updated!"
 
     return render_template('settings.html', title='Settings - Hydra Chess',
-            form=form, message=message)
+                           form=form, message=message)
 
 
 @app.route('/logout')
