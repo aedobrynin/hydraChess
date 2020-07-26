@@ -3,7 +3,7 @@
 ./dev_pypy/*
 ./hydraChess/static/img/profiles/*
 !./hydraChess/static/img/profiles/default.jpg
-./hydraChess/ngrok
+hydraChess/ngrok
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
