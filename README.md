@@ -50,4 +50,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 * [chessboard.js](https://github.com/hashlib/chessboardjs/) (Own fork) - Client side chess board
 * [Celery](https://github.com/celery/celery) - Used to run different tasks on server side
 * [Flask](https://github.com/pallets/flask) - Main server side framework
-* [rom](https://github.com/josiahcarlson/rom) - Redis object mapper
