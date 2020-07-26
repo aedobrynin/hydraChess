@@ -1,11 +1,11 @@
 #!/bin/bash
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 pkill -2 -f "hydraChess"
 sudo service redis-server start
 
-tmux_command="tmux new -c $DIR \
+tmux_command="tmux new -c $SCRIPTS_DIR \
 \"./purge_tasks.sh $1; ./run_high.sh $1\" ';' \
 split \"./run_flower.sh $1\" ';' \
 select-pane -t 0 ';' \

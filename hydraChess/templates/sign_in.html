@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<body>
+  <form class='basic-form mt-2' action="" method="post">
+    <h1 align='center'>Sign in</h1>
+    {{ form.csrf_token }}
+
+    <div class="form-group">
+      {{ form.login.label }}<br>
+      {{ form.login(class="form-control") }}
+    </div>
+    <div class="form-group">
+    {{ form.password.label }}<br>
+    {{ form.password(class="form-control", type="password") }}
+
+    {% if message %}
+    <div class="m-0 p-0 mb-2 error-message">
+      {{ message }}
+    </div>
+    {% endif %}
+    </div>
+
+    {{ form.remember_me() }} {{ form.remember_me.label }}
+
+    <div class="text-center">
+      {{ form.submit(type="submit",
+      class="btn w-100 submit-button") }}
+    </div>
+  </form>
+</body>
+{% endblock %}

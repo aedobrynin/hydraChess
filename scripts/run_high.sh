@@ -1,14 +1,13 @@
 #!/bin/bash
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
-cd ${DIR%%/}/../
+SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 if [ "$1" = "pypy" ]
 then
-        source ./dev_pypy/bin/activate
+        source ${SCRIPTS_DIR}/../dev_pypy/bin/activate
 else
-        source ./dev/bin/activate
+        source ${SCRIPTS_DIR}/../dev/bin/activate
 fi
 
+cd ${SCRIPTS_DIR}/../hydraChess
 celery -A game_management.celery worker --concurrency 30 -Q high -n worker.high -l=WARNING
