@@ -122,11 +122,6 @@ class TestUser(unittest.TestCase):
             self.assertEqual(expected, user.game_ids)
 
     def tearDown(self):
-        for game_id in self.used_game_ids:
-            game = Game.get(game_id)
-            game.delete()
-        self.used_game_ids.clear()
-
         for user_id in self.used_user_ids:
             user = User.get(user_id)
             user.delete()
