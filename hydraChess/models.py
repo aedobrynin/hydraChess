@@ -78,18 +78,15 @@ class LockableModel(Model):
             _id: int,
             redis: Redis) -> None:
         super().__init__(class_name, _id, redis)
-        self._lock = self._redis.lock(
+        self.lock = self._redis.lock(
             f"{self.key}_lock",
             timeout=5,
             blocking_timeout=5)
 
-        while not self._lock.acquire():
-            pass
-
     def fetch(self) -> None:
         '''Fetch object data from Redis.
         Raises LockNotOwnedError if the lock is expired'''
-        if self._lock.owned():
+        if self.lock.owned():
             super().fetch()
         else:
             raise exceptions.LockNotOwnedError(
@@ -98,7 +95,7 @@ class LockableModel(Model):
     def push(self) -> None:
         '''Update object data in Redis.
            Raises LockNotOwnedError if the lock is expired'''
-        if self._lock.owned():
+        if self.lock.owned():
             super().push()
         else:
             raise exceptions.LockNotOwnedError(
@@ -108,7 +105,7 @@ class LockableModel(Model):
         '''Set field value.
            Raises LockNotOwnedError if the lock is expired'''
 
-        if self._lock.owned():
+        if self.lock.owned():
             super().__setitem__(key, val)
         else:
             raise exceptions.LockNotOwnedError(
@@ -117,7 +114,7 @@ class LockableModel(Model):
     def __del__(self) -> None:
         '''If the object is destroyed, release its' lock'''
         try:
-            self._lock.release()
+            self.lock.release()
         except exceptions.LockError:
             pass
 
@@ -290,19 +287,20 @@ class Game(LockableModel):
             new_game_id = 1
 
         game = Game(new_game_id, redis)
-        game.black_user_id = 0
-        game.white_user_id = 0
-        game.black_rating_before = 0
-        game.white_rating_before = 0
-        game.state = Game.State.NOT_STARTED
-        game.result = Game.Result.NOT_DETERMINED
-        game.draw_offer_sender = Game.Color.NONE
-        game.last_move_datetime = datetime.min
-        game.total_time = timedelta(seconds=0)
-        game.black_clock = timedelta(seconds=0)
-        game.white_clock = timedelta(seconds=0)
-        game.moves = []
-        game.push()
+        with game.lock:
+            game.black_user_id = 0
+            game.white_user_id = 0
+            game.black_rating_before = 0
+            game.white_rating_before = 0
+            game.state = Game.State.NOT_STARTED
+            game.result = Game.Result.NOT_DETERMINED
+            game.draw_offer_sender = Game.Color.NONE
+            game.last_move_datetime = datetime.min
+            game.total_time = timedelta(seconds=0)
+            game.black_clock = timedelta(seconds=0)
+            game.white_clock = timedelta(seconds=0)
+            game.moves = []
+            game.push()
 
         redis.set("GameID", new_game_id)
 

@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime, timedelta
 from random import randint
 from hydraChess.models import Model, LockableModel, User, Game
-from redis import Redis, ConnectionPool, exceptions
+from redis import Redis, ConnectionPool
 from chess import Board
 
 
@@ -83,8 +83,9 @@ class TestLockableModel(unittest.TestCase):
             lockable_model_id,
             self.redis)
 
-        lock = self.redis.lock(f"{lockable_model.key}_lock")
-        self.assertFalse(lock.acquire(blocking=False))
+        with lockable_model.lock:
+            second_lock = self.redis.lock(f"{lockable_model.key}_lock")
+            self.assertFalse(second_lock.acquire(blocking=False))
 
     def tearDown(self):
         for id in self.used_lockable_model_ids:
@@ -279,28 +280,30 @@ class TestGame(unittest.TestCase):
         game = Game(game_id, self.redis)
         self.used_game_ids.append(game_id)
 
-        self.assertEqual(game.black_user_id, 0)
-        self.assertEqual(game.white_user_id, 0)
-        self.assertEqual(game.black_rating_before, 0)
-        self.assertEqual(game.white_rating_before, 0)
-        self.assertEqual(game.state, Game.State.NOT_STARTED)
-        self.assertEqual(game.result, Game.Result.NOT_DETERMINED)
-        self.assertEqual(game.draw_offer_sender, Game.Color.NONE)
-        self.assertEqual(game.last_move_datetime, datetime.min)
-        self.assertEqual(game.total_time, timedelta(seconds=0))
-        self.assertEqual(game.black_clock, timedelta(seconds=0))
-        self.assertEqual(game.white_clock, timedelta(seconds=0))
-        self.assertEqual(game.moves, [])
+        with game.lock:
+            self.assertEqual(game.black_user_id, 0)
+            self.assertEqual(game.white_user_id, 0)
+            self.assertEqual(game.black_rating_before, 0)
+            self.assertEqual(game.white_rating_before, 0)
+            self.assertEqual(game.state, Game.State.NOT_STARTED)
+            self.assertEqual(game.result, Game.Result.NOT_DETERMINED)
+            self.assertEqual(game.draw_offer_sender, Game.Color.NONE)
+            self.assertEqual(game.last_move_datetime, datetime.min)
+            self.assertEqual(game.total_time, timedelta(seconds=0))
+            self.assertEqual(game.black_clock, timedelta(seconds=0))
+            self.assertEqual(game.white_clock, timedelta(seconds=0))
+            self.assertEqual(game.moves, [])
 
     def test_white_user_id_and_black_user_id(self):
         game_id = Game.create_new_game(self.redis)
         game = Game(game_id, self.redis)
         self.used_game_ids.append(game_id)
 
-        game.white_user_id = 13
-        game.black_user_id = 14
-        game.push()
-        game.fetch()
+        with game.lock:
+            game.white_user_id = 13
+            game.black_user_id = 14
+            game.push()
+            game.fetch()
 
         self.assertEqual(game.white_user_id, 13)
         self.assertEqual(game.black_user_id, 14)
@@ -310,10 +313,11 @@ class TestGame(unittest.TestCase):
         game = Game(game_id, self.redis)
         self.used_game_ids.append(game_id)
 
-        game.white_rating_before = 3999
-        game.black_rating_before = 4000
-        game.push()
-        game.fetch()
+        with game.lock:
+            game.white_rating_before = 3999
+            game.black_rating_before = 4000
+            game.push()
+            game.fetch()
 
         self.assertEqual(game.white_rating_before, 3999)
         self.assertEqual(game.black_rating_before, 4000)
@@ -336,10 +340,11 @@ class TestGame(unittest.TestCase):
         self.used_game_ids.append(game_id)
         game = Game(game_id, self.redis)
 
-        game.white_user = white_user
-        game.black_user = black_user
-        game.push()
-        game.fetch()
+        with game.lock:
+            game.white_user = white_user
+            game.black_user = black_user
+            game.push()
+            game.fetch()
 
         self.assertEqual(game.white_user_id, white_user.id)
         self.assertEqual(game.white_rating_before, white_user.rating)
@@ -352,44 +357,48 @@ class TestGame(unittest.TestCase):
         self.used_game_ids.append(game_id)
         game = Game(game_id, self.redis)
 
-        for state in Game.State:
-            game.state = state
-            game.push()
-            game.fetch()
-            self.assertEqual(game.state, state)
+        with game.lock:
+            for state in Game.State:
+                game.state = state
+                game.push()
+                game.fetch()
+                self.assertEqual(game.state, state)
 
     def test_result(self):
         game_id = Game.create_new_game(self.redis)
         self.used_game_ids.append(game_id)
         game = Game(game_id, self.redis)
 
-        for result in Game.Result:
-            game.result = result
-            game.push()
-            game.fetch()
-            self.assertEqual(game.result, result)
+        with game.lock:
+            for result in Game.Result:
+                game.result = result
+                game.push()
+                game.fetch()
+                self.assertEqual(game.result, result)
 
     def test_draw_offer_sender(self):
         game_id = Game.create_new_game(self.redis)
         self.used_game_ids.append(game_id)
         game = Game(game_id, self.redis)
 
-        for color in Game.Color:
-            game.draw_offer_sender = color
-            game.push()
-            game.fetch()
-            self.assertEqual(game.draw_offer_sender, color)
+        with game.lock:
+            for color in Game.Color:
+                game.draw_offer_sender = color
+                game.push()
+                game.fetch()
+                self.assertEqual(game.draw_offer_sender, color)
 
     def test_last_move_datetime(self):
         game_id = Game.create_new_game(self.redis)
         self.used_game_ids.append(game_id)
         game = Game(game_id, self.redis)
 
-        dtime = datetime(1, 1, 1, 12, 14, 32, 312321)
+        with game.lock:
+            dtime = datetime(1, 1, 1, 12, 14, 32, 312321)
+            game.last_move_datetime = dtime
+            game.push()
+            game.fetch()
 
-        game.last_move_datetime = dtime
-        game.push()
-        game.fetch()
         self.assertEqual(game.last_move_datetime, dtime)
 
     def test_total_time_and_black_clock_and_white_clock(self):
@@ -397,15 +406,16 @@ class TestGame(unittest.TestCase):
         self.used_game_ids.append(game_id)
         game = Game(game_id, self.redis)
 
-        total_time = timedelta(seconds=30, microseconds=13231)
-        game.total_time = total_time
-        black_clock = timedelta(seconds=310, microseconds=321312)
-        game.black_clock = black_clock
-        white_clock = timedelta(seconds=312, microseconds=31231)
-        game.white_clock = white_clock
+        with game.lock:
+            total_time = timedelta(seconds=30, microseconds=13231)
+            game.total_time = total_time
+            black_clock = timedelta(seconds=310, microseconds=321312)
+            game.black_clock = black_clock
+            white_clock = timedelta(seconds=312, microseconds=31231)
+            game.white_clock = white_clock
 
-        game.push()
-        game.fetch()
+            game.push()
+            game.fetch()
 
         self.assertEqual(game.total_time, total_time)
         self.assertEqual(game.black_clock, black_clock)
@@ -416,10 +426,11 @@ class TestGame(unittest.TestCase):
         self.used_game_ids.append(game_id)
         game = Game(game_id, self.redis)
 
-        moves = ['e4', 'e5', 'Nf3', 'Nc6']
-        game.moves = moves
-        game.push()
-        game.fetch()
+        with game.lock:
+            moves = ['e4', 'e5', 'Nf3', 'Nc6']
+            game.moves = moves
+            game.push()
+            game.fetch()
 
         self.assertEqual(game.moves, moves)
 
@@ -428,40 +439,42 @@ class TestGame(unittest.TestCase):
         self.used_game_ids.append(game_id)
         game = Game(game_id, self.redis)
 
-        moves = ['e4', 'e5', 'Nf3', 'Nc6']
+        with game.lock:
+            moves = ['e4', 'e5', 'Nf3', 'Nc6']
 
-        next_to_move = Game.Color.WHITE
+            next_to_move = Game.Color.WHITE
 
-        for i in range(len(moves)):
-            self.assertEqual(game.get_moves_cnt(), i)
+            for i in range(len(moves)):
+                self.assertEqual(game.get_moves_cnt(), i)
+                self.assertEqual(game.get_next_to_move(), next_to_move)
+
+                game.append_move(moves[i])
+                if next_to_move == Game.Color.WHITE:
+                    next_to_move = Game.Color.BLACK
+                else:
+                    next_to_move = Game.Color.WHITE
+
             self.assertEqual(game.get_next_to_move(), next_to_move)
-
-            game.append_move(moves[i])
-            if next_to_move == Game.Color.WHITE:
-                next_to_move = Game.Color.BLACK
-            else:
-                next_to_move = Game.Color.WHITE
-
-        self.assertEqual(game.get_next_to_move(), next_to_move)
-        self.assertEqual(game.get_moves_cnt(), len(moves))
-        self.assertEqual(game.moves, moves)
+            self.assertEqual(game.get_moves_cnt(), len(moves))
+            self.assertEqual(game.moves, moves)
 
     def test_get_board(self):
         game_id = Game.create_new_game(self.redis)
         self.used_game_ids.append(game_id)
         game = Game(game_id, self.redis)
 
-        moves = ['e4', 'e5', 'Nf3', 'Nc6']
+        with game.lock:
+            moves = ['e4', 'e5', 'Nf3', 'Nc6']
 
-        expected_board = Board()
-        for move in moves:
-            expected_board.push_san(move)
+            expected_board = Board()
+            for move in moves:
+                expected_board.push_san(move)
 
-        game.moves = moves
-        game.push()
-        game.fetch()
+            game.moves = moves
+            game.push()
+            game.fetch()
 
-        self.assertEqual(game.get_board(), expected_board)
+            self.assertEqual(game.get_board(), expected_board)
 
     def tearDown(self):
         for id in self.used_game_ids:
