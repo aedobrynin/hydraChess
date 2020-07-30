@@ -10,4 +10,5 @@ else
         source ${SCRIPTS_DIR}/../dev/bin/activate
 fi
 
-python3 ${SCRIPTS_DIR}/../hydraChess/main.py
+cd ${SCRIPTS_DIR}/../
+python3 -m hydraChess

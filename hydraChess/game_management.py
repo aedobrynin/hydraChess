@@ -5,7 +5,7 @@ import chess
 from celery.task.control import revoke
 from flask_celery import make_celery
 from main import app, sio
-from models import User, Game, DEFAULT_REDIS
+from models import User, Game
 
 
 FIRST_MOVE_TIME_OUT = 15

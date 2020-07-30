@@ -1,16 +1,3 @@
-import sys
-from pathlib import Path
-file = Path(__file__).resolve()
-parent, root = file.parent, file.parents[1]
-sys.path.append(str(root))
-
-# Additionally remove the current file's directory from sys.path
-try:
-    sys.path.remove(str(parent))
-except ValueError: # Already removed
-    pass
-
-
 import unittest
 from datetime import datetime, timedelta
 from random import randint
@@ -24,8 +11,7 @@ def gen_random_id() -> int:
 
 
 class TestModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
+    def setUp(self):
         self.pool = ConnectionPool(host='localhost', port=6379, db=1)
         self.redis = Redis(connection_pool=self.pool)
         self.used_model_ids = list()
@@ -83,8 +69,7 @@ class TestModel(unittest.TestCase):
 
 
 class TestLockableModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
+    def setUp(self):
         self.pool = ConnectionPool(host='localhost', port=6379, db=1)
         self.redis = Redis(connection_pool=self.pool)
         self.used_lockable_model_ids = list()
@@ -108,11 +93,8 @@ class TestLockableModel(unittest.TestCase):
         self.used_lockable_model_ids.clear()
 
 
-
-
 class TestUser(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
+    def setUp(self):
         self.pool = ConnectionPool(host='localhost', port=6379, db=1)
         self.redis = Redis(connection_pool=self.pool)
         self.used_user_ids = list()
@@ -280,8 +262,7 @@ class TestUser(unittest.TestCase):
 
 
 class TestGame(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
+    def setUp(self):
         self.pool = ConnectionPool(host='localhost', port=6379, db=1)
         self.redis = Redis(connection_pool=self.pool)
         self.used_game_ids = list()

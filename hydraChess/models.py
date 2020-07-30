@@ -5,11 +5,7 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from chess import Board
 from flask_login import UserMixin
-from redis import Redis, ConnectionPool, exceptions
-
-
-DEFAULT_POOL = ConnectionPool(host='localhost', port=6379, db=0)
-DEFAULT_REDIS = Redis(connection_pool=DEFAULT_POOL)
+from redis import Redis, exceptions
 
 
 class Model:
@@ -127,11 +123,11 @@ class LockableModel(Model):
 
 
 class User(Model, UserMixin):
-    def __init__(self, _id: int, redis: Redis = DEFAULT_REDIS) -> None:
+    def __init__(self, _id: int, redis: Redis) -> None:
         super().__init__("User", _id, redis)
 
     @classmethod
-    def create_new_user(cls, redis: Redis = DEFAULT_REDIS) -> int:
+    def create_new_user(cls, redis: Redis) -> int:
         '''Create new user and fill all fields with default values.
            Returns new user id.'''
         new_user_id = redis.get("UserID")
@@ -157,8 +153,7 @@ class User(Model, UserMixin):
         return new_user_id
 
     @classmethod
-    def get_user_id_by_nickname(cls, nickname: str,
-                                redis: Redis = DEFAULT_REDIS) -> int:
+    def get_user_id_by_nickname(cls, nickname: str, redis: Redis) -> int:
         '''Returns user id by nickname index from Redis.
            Returns 0 if user not found.'''
         key = f"UserIdByNickname:{nickname}"
@@ -281,11 +276,11 @@ class Game(LockableModel):
         WHITE = 1
         BLACK = 2
 
-    def __init__(self, _id: int, redis: Redis = DEFAULT_REDIS):
+    def __init__(self, _id: int, redis: Redis):
         super().__init__("Game", _id, redis)
 
     @classmethod
-    def create_new_game(cls, redis: Redis = DEFAULT_REDIS) -> int:
+    def create_new_game(cls, redis: Redis) -> int:
         '''Create new game and fill all fields with default values.
            Returns new game id.'''
         new_game_id = redis.get("GameID")

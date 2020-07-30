@@ -1,6 +1,5 @@
 language: python
 python:
-  - "3.6"
   - "3.7"
   - "3.8"
   - "3.8-dev"
@@ -11,5 +10,5 @@ install:
 services:
   - redis
 script:
-  - python -m unittest tests/TestModels.py
+  - python -m unittest discover
 dist: bionic

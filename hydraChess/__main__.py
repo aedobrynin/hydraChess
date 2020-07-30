@@ -10,21 +10,25 @@ from flask import render_template, redirect
 from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
-from forms import RegisterForm, LoginForm, SettingsForm
-from models import User
+from redis import ConnectionPool, Redis
+from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
+from hydraChess.models import User
+from hydraChess.config import ProductionConfig
 # import game_management
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'abacabadabacaba'
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
-app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024  # 4 Mb
-
+app.config.from_object(ProductionConfig)
+app.config['REDIS_POOL'] = ConnectionPool(
+    host='localhost',
+    port=6379,
+    db=app.config['REDIS_DB_ID'])
+app.config['REDIS_OBJ'] = Redis(connection_pool=app.config['REDIS_POOL'])
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-sio = SocketIO(app, message_queue="redis://localhost:6379/0")
+sio = SocketIO(app, message_queue=app.config['CELERY_BROKER_URL'])
 
 
 def authenticated_only(func):
@@ -38,7 +42,7 @@ def authenticated_only(func):
 
 @login_manager.user_loader
 def load_user(user_id: int) -> User:
-    return User(user_id)
+    return User(user_id, app.config['REDIS_OBJ'])
 
 
 @app.route('/index', methods=['GET'])
@@ -76,8 +80,8 @@ def register():
         return redirect('/')
     form = RegisterForm()
     if form.validate_on_submit():
-        user_id = User.create_new_user()
-        user = User(user_id)
+        user_id = User.create_new_user(app.config['REDIS_OBJ'])
+        user = User(user_id, app.config['REDIS_OBJ'])
         user.nickname = form.login.data
         user.hashed_password = form.password.data
         user.push()
@@ -96,9 +100,11 @@ def sign_in():
 
     form = LoginForm()
     if form.validate_on_submit():
-        user_id = User.get_user_id_by_nickname(form.login.data)
+        user_id = User.get_user_id_by_nickname(
+            form.login.data,
+            app.config['REDIS_OBJ'])
         if user_id != 0:
-            user = User(user_id)
+            user = User(user_id, app.config['REDIS_OBJ'])
             if user.check_password(form.password.data):
                 login_user(user, remember=form.remember_me.data)
                 return redirect("/")
@@ -109,10 +115,10 @@ def sign_in():
 
 @app.route('/user/<nickname>', methods=['GET'])
 def user_profile(nickname: str):
-    user_id = User.get_user_id_by_nickname(nickname)
+    user_id = User.get_user_id_by_nickname(nickname, app.config['REDIS_OBJ'])
     if user_id == 0:
         return render_template('404.html'), 404
-    user = User(user_id)
+    user = User(user_id, app.config['REDIS_OBJ'])
     return render_template('user_profile.html',
                            title=f"{user.nickname}'s profile - Hydra Chess",
                            nickname=user.nickname,
@@ -319,4 +325,5 @@ def page_not_found(e):
 
 
 if __name__ == '__main__':
+    # SET DEBUG TO FALSE IN PRODUCTION
     sio.run(app, port=8000, debug=True)
