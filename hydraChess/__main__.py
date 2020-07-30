@@ -13,9 +13,11 @@ import rom.util
 from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
+from flask_restful import Api
 from hydraChess.config import ProductionConfig, TestingConfig
 from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
 from hydraChess.models import User, Game
+from hydraChess.resources import GamesList
 
 
 app = Flask(__name__)
@@ -28,6 +30,10 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 sio = SocketIO(app, message_queue=app.config['CELERY_BROKER_URL'])
+
+api = Api(app)
+api.add_resource(GamesList, '/api/v1.x/games_list/')
+
 
 from hydraChess import game_management
 

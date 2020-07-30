@@ -1,3 +1,4 @@
+from typing import List
 from datetime import timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from chess import Board, WHITE, BLACK
@@ -16,7 +17,7 @@ class User(rom.Model, UserMixin):
     rating = rom.Integer(default=1200)
 
     games_played = rom.Integer(default=0)
-
+    raw_game_ids = rom.Text(default="")  # LIFO
     cur_game_id = rom.Integer(default=None)
 
     k_factor = rom.Integer(default=40)
@@ -26,6 +27,25 @@ class User(rom.Model, UserMixin):
     sid = rom.Text()
 
     avatar_hash = rom.Text(default="default")
+
+    @property
+    def game_ids(self) -> List[int]:
+        if self.raw_game_ids:
+            return list(map(int, self.raw_game_ids.split(',')))
+        return list()
+
+    @game_ids.setter
+    def game_ids(self, val: List[int]) -> None:
+        if val:
+            self.raw_game_ids = ','.join(val)
+        else:
+            self.raw_game_ids = ""
+
+    def append_game_id(self, game_id: int) -> None:
+        if self.raw_game_ids:
+            self.raw_game_ids = f"{game_id},{self.raw_game_ids}"
+        else:
+            self.raw_game_ids = f"{game_id}"
 
     def set_password(self, password: str) -> None:
         self.hashed_password = generate_password_hash(password)

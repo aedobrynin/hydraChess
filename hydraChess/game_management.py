@@ -85,6 +85,11 @@ def start_game(game_id: int) -> None:
         room=game.white_user.sid,
     )
 
+    game.white_user.append_game_id(game_id)
+    game.black_user.append_game_id(game_id)
+    game.white_user.save()
+    game.black_user.save()
+
 
 @celery.task(name='make_move', ignore_result=True)
 def make_move(user_id: int, game_id: int, move_san: str) -> None:

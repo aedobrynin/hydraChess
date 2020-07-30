@@ -98,5 +98,40 @@ class TestGame(unittest.TestCase):
         self.used_user_ids.clear()
 
 
+class TestUser(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        rom.util.set_connection_settings(db=TestingConfig.REDIS_DB_ID)
+
+    def setUp(self):
+        self.used_user_ids = list()
+
+    def test_game_ids_and_append_game_id(self):
+        user = User()
+        user.save()
+        self.used_user_ids.append(user.id)
+
+        self.assertEqual(user.game_ids, [])
+
+        expected = []
+        for game_id in range(10):
+            expected.insert(0, game_id)
+            user.append_game_id(game_id)
+            user.save()
+            user.refresh()
+            self.assertEqual(expected, user.game_ids)
+
+    def tearDown(self):
+        for game_id in self.used_game_ids:
+            game = Game.get(game_id)
+            game.delete()
+        self.used_game_ids.clear()
+
+        for user_id in self.used_user_ids:
+            user = User.get(user_id)
+            user.delete()
+        self.used_user_ids.clear()
+
+
 if __name__ == "__main__":
     unittest.main()
