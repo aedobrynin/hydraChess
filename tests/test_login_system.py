@@ -9,9 +9,9 @@ from multiprocessing import Process
 import unittest
 import requests
 import rom.util
-from redis import ConnectionPool, Redis
+from flask_socketio import SocketIO
 from hydraChess.config import TestingConfig
-from hydraChess.__main__ import app, sio
+from hydraChess.__main__ import app
 
 
 class TestRegister(unittest.TestCase):
@@ -19,18 +19,26 @@ class TestRegister(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         app.config.from_object(TestingConfig)
+
         rom.util.set_connection_settings(db=app.config['REDIS_DB_ID'])
         rom.util.use_null_session()
+
+        sio = SocketIO(app, message_queue=app.config['SOCKET_IO_URL'])
+
         cls.process = Process(
             target=sio.run,
             args=(app,),
-            kwargs={'port': 8000, 'debug': True, 'use_reloader': False}
+            kwargs={
+                'port': app.config['PORT'],
+                'debug': True,
+                'use_reloader': False
+            }
         )
         cls.process.start()
         sleep(3)
 
     def setUp(self):
-        self.url = 'http://localhost:8000/register'
+        self.url = app.config['HOST'] + 'register'
         self.user_data = {
             'login': uuid4().hex[:15],
             'password': 'testtesttest',
@@ -142,18 +150,26 @@ class TestLogin(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         app.config.from_object(TestingConfig)
+
         rom.util.set_connection_settings(db=app.config['REDIS_DB_ID'])
         rom.util.use_null_session()
+
+        sio = SocketIO(app, messages_queue=app.config['SOCKET_IO_URL'])
+
         cls.process = Process(
             target=sio.run,
             args=(app,),
-            kwargs={'port': 8000, 'debug': True, 'use_reloader': False}
+            kwargs={
+                'port': app.config['PORT'],
+                'debug': True,
+                'use_reloader': False
+            }
         )
         cls.process.start()
         sleep(3)
 
     def setUp(self):
-        self.url = 'http://localhost:8000/sign_in'
+        self.url = app.config['HOST'] + 'sign_in'
         self.user_data = {
             'login': uuid4().hex[:10],
             'password': 'testtesttest',
@@ -163,7 +179,7 @@ class TestLogin(unittest.TestCase):
         data = self.user_data.copy()
         data['submit'] = 'Register'
         data['confirm_password'] = data['password']
-        resp = requests.post('http://localhost:8000/register', data=data)
+        resp = requests.post(app.config['HOST'] + 'register', data=data)
         self.assertIn('lobby', resp.url)
 
     def test_bad_login(self):

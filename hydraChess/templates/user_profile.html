@@ -40,7 +40,7 @@
 
 <script>
   function show_latest_games(data) {
-    data.forEach(function(item) {
+    data['games'].forEach(function(item) {
       $('#latest_games').
         find('tbody:last').
         append(`<tr data-href='/game/${item.id}' style="cursor: pointer">
@@ -50,7 +50,6 @@
               </tr>`
         )
     })
-    console.log(data)
   }
 
   $.get(

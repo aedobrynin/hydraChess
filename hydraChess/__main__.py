@@ -17,7 +17,7 @@ from flask_restful import Api
 from hydraChess.config import ProductionConfig, TestingConfig
 from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
 from hydraChess.models import User, Game
-from hydraChess.resources import GamesList
+from hydraChess.resources import GamesPlayed, GamesList
 
 
 app = Flask(__name__)
@@ -29,9 +29,10 @@ rom.util.use_null_session()
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-sio = SocketIO(app, message_queue=app.config['CELERY_BROKER_URL'])
+sio = SocketIO(app, message_queue=app.config['SOCKET_IO_URL'])
 
 api = Api(app)
+api.add_resource(GamesPlayed, '/api/v1.x/games_played/')
 api.add_resource(GamesList, '/api/v1.x/games_list/')
 
 
@@ -316,5 +317,9 @@ def page_not_found(e):
 
 
 if __name__ == '__main__':
-    # SET DEBUG TO FALSE IN PRODUCTION
-    sio.run(app, port=8000, debug=True)
+    #  Set debug to False in production
+    sio.run(
+        app,
+        port=app.config['PORT'],
+        debug=True,
+    )
