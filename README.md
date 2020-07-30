@@ -2,7 +2,6 @@
 
 Hydra Chess is a Flask application to play chess online
 Tested on Python 3.7.5 and Redis 5.0.5
-
 ![Interface](https://raw.githubusercontent.com/hashlib/hydraChess/master/hydraChess/static/img/hydra_chess.png)
 
 ## Prerequisites
@@ -12,12 +11,6 @@ Tested on Python 3.7.5 and Redis 5.0.5
 $ python3 -mvenv dev
 $ source dev/bin/activate
 $ pip3 install -r requirements.txt
-```
-For PyPy
-```
-$ pypy3 -mvenv dev_pypy
-$ source dev_pypy/bin/activate
-$ pip3 install -r requirements_pypy.txt
 ```
 
 2. Install Redis
