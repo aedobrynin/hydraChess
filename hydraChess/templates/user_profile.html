@@ -17,10 +17,51 @@
         <p class="rating my-0">Current rating: <a class="rating-value">{{ rating }}</a></h2>
       </div>
     </div>
-    <div class="d-flex flex-row">
-      <h1>Latest games</h1>
-
+    <div class="d-flex flex-column">
+      <h1 class='text-light'>Latest games</h1>
+      <table class='table table-light' id='latest_games'>
+        <thead>
+          <tr>
+            <th scope='col'>White player</th>
+            <th scope='col'>Black player</th>
+            <th scope='col'>Result</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
     </div>
   </div>
 </body>
+
+{% endblock %}
+
+{% block extra_scripts %}
+
+<script>
+  function show_latest_games(data) {
+    data.forEach(function(item) {
+      $('#latest_games').
+        find('tbody:last').
+        append(`<tr data-href='/game/${item.id}' style="cursor: pointer">
+                <td><a href='/user/${item.white_player}'>${item.white_player}</a></td>
+                <td><a href='/user/${item.black_player}'>${item.black_player}</a></td>
+                <td>${item.result}</td>
+              </tr>`
+        )
+    })
+    console.log(data)
+  }
+
+  $.get(
+    "/api/v1.x/games_list",
+    {nickname: "{{ nickname }}"},
+    show_latest_games,
+  )
+
+  $('body').on('click', 'tr[data-href]', function() {
+    document.location = $(this).data('href');
+	});
+</script>
+
 {% endblock %}
