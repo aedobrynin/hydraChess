@@ -28,6 +28,7 @@
           <a class="nav-link dropdown-toggle" href="#" id="navbar_dropdown"
              role="button" data-toggle="dropdown" aria-haspopup="true"
              aria-expanded="false" style="min-width: 150px">{{current_user.login}}</a>
+          <!--FIXME-->
           <div class="dropdown-menu bg-dark" aria-labelledby="navbar_dropdown">
             <a class="dropdown-item text-white" href="{{ url_for("user_profile", nickname=current_user.login) }}">Profile</a>
             <a class="dropdown-item text-white" href="{{ url_for("settings") }}">Settings</a>

@@ -4,7 +4,6 @@ from math import ceil
 import chess
 import rom
 from celery.task.control import revoke
-
 from hydraChess.flask_celery import make_celery
 from hydraChess.__main__ import app, sio
 from hydraChess.models import User, Game, GameRequest

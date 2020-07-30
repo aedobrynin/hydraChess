@@ -1,5 +1,4 @@
 from celery import Celery
-
 from hydraChess import celery_config
 
 

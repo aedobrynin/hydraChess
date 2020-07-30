@@ -68,8 +68,8 @@
   /* -- SOUNDS -- */
 
   function setPlayersInfo(infoA, infoB) {
-    $('#info_a').html(`<a href="/user/${infoA.id}" class="nickname">${infoA.nickname}</a> (${infoA.rating})`)
-    $('#info_b').html(`<a href="/user/${infoB.id}" class="nickname">${infoB.nickname}</a> (${infoB.rating})`)
+    $('#info_a').html(`<a href="/user/${infoA.nickname}" class="nickname">${infoA.nickname}</a> (${infoA.rating})`)
+    $('#info_b').html(`<a href="/user/${infoB.nickname}" class="nickname">${infoB.nickname}</a> (${infoB.rating})`)
   }
 
   function setResults(result) {
