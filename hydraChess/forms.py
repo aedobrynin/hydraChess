@@ -1,9 +1,12 @@
+from io import BytesIO
+import imghdr
 import re
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField,\
                     BooleanField, validators
 from wtforms.validators import StopValidation
-from models import User
+from hydraChess.models import User
 
 
 def login_content_validator(form, field):
@@ -26,11 +29,23 @@ def password_content_validator(form, field):
                                       "symbols are allowed"))
 
 
+def image_content_validator(form, field):
+    image = field.data
+    raw_img = BytesIO(image.read())
+    if imghdr.what(raw_img) is None:
+        raise StopValidation(message=("Can't read image data"))
+
+
 class RegisterForm(FlaskForm):
     login = \
         StringField('Login',
                     validators=[validators.DataRequired(),
                                 login_content_validator,
+                                validators.Length(min=3,
+                                                  message=("Login can't be "
+                                                           "shorter than "
+                                                           "%(min)d "
+                                                           "characters")),
                                 validators.Length(max=20,
                                                   message=("Login can't be "
                                                            "longer than "
@@ -69,3 +84,13 @@ class LoginForm(FlaskForm):
 
     remember_me = BooleanField('Remember me')
     submit = SubmitField('Sign in')
+
+
+class SettingsForm(FlaskForm):
+    image = FileField('Profile image',
+                      validators=[FileRequired(),
+                                  FileAllowed(['jpg', 'png', 'jpeg'],
+                                              ('Only .png, .jpg, .jpeg '
+                                               ' images are allowed')),
+                                  image_content_validator])
+    submit = SubmitField('Update settings')

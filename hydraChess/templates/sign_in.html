@@ -6,26 +6,26 @@
     <h1 align='center'>Sign in</h1>
     {{ form.csrf_token }}
 
-    {{ form.login.label }}<br>
-    {{ form.login(class="form-control") }}<br>
-
+    <div class="form-group">
+      {{ form.login.label }}<br>
+      {{ form.login(class="form-control") }}
+    </div>
+    <div class="form-group">
     {{ form.password.label }}<br>
-    {{ form.password(class="form-control",
-    type="password") }}<br>
+    {{ form.password(class="form-control", type="password") }}
 
     {% if message %}
-    <div class="m-0 p-0 mb-2" style="color: red;">
-      Wrong password
+    <div class="m-0 p-0 mb-2 error-message">
+      {{ message }}
     </div>
     {% endif %}
+    </div>
 
     {{ form.remember_me() }} {{ form.remember_me.label }}
 
     <div class="text-center">
       {{ form.submit(type="submit",
-      class="btn w-100",
-      style="background-color: #5b636e;
-      color: white;") }}
+      class="btn w-100 submit-button") }}
     </div>
   </form>
 </body>

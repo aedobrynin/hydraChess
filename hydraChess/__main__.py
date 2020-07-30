@@ -1,25 +1,35 @@
 from gevent import monkey
 monkey.patch_all()
 
-from flask import Flask, request
+import os
+import sys
+import uuid
+from io import BytesIO
+from PIL import Image
+from flask import Flask, request, url_for
 from flask import render_template, redirect
+from rom.util import EntityLock
+import rom.util
 from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
-from rom.util import EntityLock
-from models import User, Game
-from forms import RegisterForm, LoginForm
-import game_management
+from hydraChess.config import ProductionConfig, TestingConfig
+from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
+from hydraChess.models import User, Game
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'abacabadabacaba'
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config.from_object(ProductionConfig)
+
+rom.util.set_connection_settings(db=app.config['REDIS_DB_ID'])
+rom.util.use_null_session()
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-sio = SocketIO(app, message_queue="redis://localhost:6379/0")
+sio = SocketIO(app, message_queue=app.config['CELERY_BROKER_URL'])
+
+from hydraChess import game_management
 
 
 def authenticated_only(func):
@@ -97,6 +107,18 @@ def sign_in():
     return render_template('sign_in.html', title="Sign in", form=form)
 
 
+@app.route('/user/<nickname>', methods=['GET'])
+def user_profile(nickname: str):
+    user = User.get_by(login=nickname)
+    if not user:
+        return render_template('404.html'), 404
+    return render_template('user_profile.html',
+                           title=f"{user.login}'s profile - Hydra Chess",
+                           nickname=user.login,
+                           rating=user.rating,
+                           avatar_hash=user.avatar_hash)
+
+
 @sio.on('search_game')
 @authenticated_only
 def on_search_game(*args, **kwargs):
@@ -119,7 +141,7 @@ def on_search_game(*args, **kwargs):
             game = Game.get(game_id)
             if not game:
                 return
-            minutes = game.total_clock // 60
+            minutes = game.total_clock.total_seconds() // 60
         except (ValueError, TypeError):
             return
 
@@ -142,11 +164,10 @@ def on_resign(*args, **kwargs) -> None:
 
 
 # TODO
-'''
+"""
 @sio.on('send_message')
 @authenticated_only
 def on_send_message(*args, **kwargs) -> None:
-    """Sends message to game chat. Currently disabled."""
     if not current_user.cur_game_id:
         return
 
@@ -156,7 +177,7 @@ def on_send_message(*args, **kwargs) -> None:
             game_management.send_message.delay(current_user.cur_game_id,
                                                sender=current_user.login,
                                                message=message)
-'''
+"""
 
 
 @sio.on('connect')
@@ -244,6 +265,33 @@ def on_make_move(*args, **kwargs):
             game_management.make_move.delay(user_id, game_id, san)
 
 
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    form = SettingsForm()
+
+    message = ""
+    if form.validate_on_submit():
+        form.image.data.seek(0)  # Because the stream was already read on validation
+        raw_img = BytesIO(form.image.data.read())
+
+        img = Image.open(raw_img)
+        new_size = min(300, img.width), min(300, img.height)
+        img = img.resize(new_size).convert('RGB')
+
+        img_hash = uuid.uuid4().hex
+        path = os.path.dirname(os.path.realpath(__file__)) +\
+            url_for('static', filename=f'img/profiles/{img_hash}.jpg')
+        img.save(path)
+
+        current_user.avatar_hash = img_hash
+        current_user.save()
+        message = "Your settings were successfuly updated!"
+
+    return render_template('settings.html', title='Settings - Hydra Chess',
+                           form=form, message=message)
+
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -262,4 +310,5 @@ def page_not_found(e):
 
 
 if __name__ == '__main__':
+    # SET DEBUG TO FALSE IN PRODUCTION
     sio.run(app, port=8000, debug=True)

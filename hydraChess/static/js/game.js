@@ -68,8 +68,8 @@
   /* -- SOUNDS -- */
 
   function setPlayersInfo(infoA, infoB) {
-    $('#info_a').html(`${infoA.nickname} (${infoA.rating})`)
-    $('#info_b').html(`${infoB.nickname} (${infoB.rating})`)
+    $('#info_a').html(`<a href="/user/${infoA.nickname}" class="nickname">${infoA.nickname}</a> (${infoA.rating})`)
+    $('#info_b').html(`<a href="/user/${infoB.nickname}" class="nickname">${infoB.nickname}</a> (${infoB.rating})`)
   }
 
   function setResults(result) {
@@ -246,7 +246,7 @@
     updateBoardSize()
  }
 
-  function onGameUpdated(data) {
+ function onGameUpdated(data) {
     clockPair.setTimes(data.black_clock, data.white_clock)
 
     // There won't be animation, because we already updated board position
@@ -291,20 +291,25 @@
 
     // Calculate ratingDelta for modal
     var ratingDelta = 0
-    if (data.result === '1/2-1/2')      {
- ratingDelta = ratingChanges['draw']
-}    else if (color === 'w') {
-      if (data.result === '1-0')        {
-ratingDelta = ratingChanges['win']
-}      else if (data.result === '0-1')        {
-ratingDelta = ratingChanges['lose']
-}
+    if (data.result === '1/2-1/2') {
+      ratingDelta = ratingChanges['draw']
+    } else if (color === 'w') {
+      if (data.result === '1-0') {
+        ratingDelta = ratingChanges['win']
+      } else if (data.result === '0-1') {
+        ratingDelta = ratingChanges['lose']
+      }
     } else {
       if (data.result === '1-0')        {
-ratingDelta = ratingChanges['lose']
-}      else if (data.result === '0-1')        { ratingDelta = ratingChanges['win'] }
+        ratingDelta = ratingChanges['lose']
+      } else if (data.result === '0-1') {
+        ratingDelta = ratingChanges['win']
+      }
     }
-    if (ratingDelta > 0) ratingDelta = '+' + ratingDelta
+
+    if (ratingDelta > 0) {
+      ratingDelta = '+' + ratingDelta
+    }
     rating += parseInt(ratingDelta)
 
     $('#game_results_container')

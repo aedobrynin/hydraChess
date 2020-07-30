@@ -75,7 +75,15 @@
   height: 30px;
   padding-left: 5px;
   line-height: 30px;
-};
+}
+
+.nickname {
+  color: black;
+}
+
+.nickname:hover {
+  color: black;
+}
 
 .move {
   height: 25px;
