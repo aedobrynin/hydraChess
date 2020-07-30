@@ -14,8 +14,8 @@ from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 from hydraChess.config import ProductionConfig, TestingConfig
-from hydraChess.models import User, Game
 from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
+from hydraChess.models import User, Game
 
 
 app = Flask(__name__)

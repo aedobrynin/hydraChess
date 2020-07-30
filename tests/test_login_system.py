@@ -142,13 +142,8 @@ class TestLogin(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         app.config.from_object(TestingConfig)
-        app.config['REDIS_POOL'] = ConnectionPool(
-            host='localhost',
-            port=6379,
-            db=app.config['REDIS_DB_ID']
-        )
-        app.config['REDIS_OBJ'] =\
-            Redis(connection_pool=app.config['REDIS_POOL'])
+        rom.util.set_connection_settings(db=app.config['REDIS_DB_ID'])
+        rom.util.use_null_session()
         cls.process = Process(
             target=sio.run,
             args=(app,),
