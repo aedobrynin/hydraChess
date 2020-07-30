@@ -1,5 +1,6 @@
 from celery import Celery
-import celery_config
+
+from hydraChess import celery_config
 
 
 def make_celery(app):

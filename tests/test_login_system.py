@@ -51,7 +51,7 @@ class TestRegister(unittest.TestCase):
     def test_too_short_login(self):
         data = self.user_data.copy()
         for login_len in range(1, 3):
-            data['login'] = 'a' * login_len
+            data['login'] = data['login'][:login_len]
             resp = requests.post(self.url, data=data)
             self.assertIn(
                 "Login can't be shorter than 3 characters",
@@ -180,7 +180,7 @@ class TestLogin(unittest.TestCase):
         data['login'] = data['login'][:-1]
         resp = requests.post(self.url, data=data)
         self.assertIn(
-            "Wrong password",
+            "Wrong login or password",
             unescape(resp.text)
         )
 
@@ -189,7 +189,7 @@ class TestLogin(unittest.TestCase):
         data['password'] = data['password'][:-1]
         resp = requests.post(self.url, data=data)
         self.assertIn(
-            "Wrong password",
+            "Wrong login or password",
             unescape(resp.text)
         )
 

@@ -27,9 +27,9 @@
          <li class="dropdown d-none d-md-block">
           <a class="nav-link dropdown-toggle" href="#" id="navbar_dropdown"
              role="button" data-toggle="dropdown" aria-haspopup="true"
-             aria-expanded="false" style="min-width: 150px">{{current_user.nickname}}</a>
+             aria-expanded="false" style="min-width: 150px">{{current_user.login}}</a>
           <div class="dropdown-menu bg-dark" aria-labelledby="navbar_dropdown">
-            <a class="dropdown-item text-white" href="{{ url_for("user_profile", nickname=current_user.nickname) }}">Profile</a>
+            <a class="dropdown-item text-white" href="{{ url_for("user_profile", nickname=current_user.login) }}">Profile</a>
             <a class="dropdown-item text-white" href="{{ url_for("settings") }}">Settings</a>
             <a class="dropdown-item text-white" href="{{ url_for("logout") }}">
               Logout</a>
@@ -38,7 +38,7 @@
 
         <!-- This element are for collapsed navbar -->
         <li class="nav-item d-md-none">
-          <a class="nav-link" href="{{ url_for("user_profile", nickname=current_user.nickname) }}">Profile</a>
+          <a class="nav-link" href="{{ url_for("user_profile", nickname=current_user.login) }}">Profile</a>
           <a class="nav-link" href="{{ url_for("settings") }}">Settings</a>
           <a class="nav-link" href="{{ url_for("logout") }}">Logout</a>
         </li>

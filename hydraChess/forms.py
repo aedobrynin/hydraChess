@@ -1,13 +1,12 @@
-import re
-import imghdr
 from io import BytesIO
+import imghdr
+import re
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField,\
                     BooleanField, validators
 from wtforms.validators import StopValidation
 from hydraChess.models import User
-from flask import current_app
 
 
 def login_content_validator(form, field):
@@ -17,9 +16,7 @@ def login_content_validator(form, field):
         raise StopValidation(message=('Only letters, digits and '
                                       'underscore are allowed'))
 
-    if User.get_user_id_by_nickname(
-            login,
-            current_app.config['REDIS_OBJ']) != 0:
+    if User.get_by(login=login.encode()):
         raise StopValidation(message=('Login already taken'))
 
 

@@ -10,5 +10,5 @@ else
 fi
 
 
-cd ${SCRIPTS_DIR}/../hydraChess
-celery -A game_management.celery flower -l=INFO
+cd ${SCRIPTS_DIR}/..
+celery -A hydraChess.game_management.celery flower -l=INFO

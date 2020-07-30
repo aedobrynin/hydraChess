@@ -1,29 +1,29 @@
 from gevent import monkey
 monkey.patch_all()
 
+import os
 import sys
 import uuid
 from io import BytesIO
 from PIL import Image
 from flask import Flask, request, url_for
 from flask import render_template, redirect
+from rom.util import EntityLock
+import rom.util
 from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
-from redis import ConnectionPool, Redis
+from hydraChess.config import ProductionConfig, TestingConfig
+from hydraChess.models import User, Game
 from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
-from hydraChess.models import User
-from hydraChess.config import ProductionConfig
-# import game_management
+from hydraChess import game_management
 
 
 app = Flask(__name__)
 app.config.from_object(ProductionConfig)
-app.config['REDIS_POOL'] = ConnectionPool(
-    host='localhost',
-    port=6379,
-    db=app.config['REDIS_DB_ID'])
-app.config['REDIS_OBJ'] = Redis(connection_pool=app.config['REDIS_POOL'])
+
+rom.util.set_connection_settings(db=app.config['REDIS_DB_ID'])
+rom.util.use_null_session()
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -42,7 +42,7 @@ def authenticated_only(func):
 
 @login_manager.user_loader
 def load_user(user_id: int) -> User:
-    return User(user_id, app.config['REDIS_OBJ'])
+    return User.get(user_id)
 
 
 @app.route('/index', methods=['GET'])
@@ -59,7 +59,6 @@ def lobby():
     return render_template('lobby.html', title='Lobby - Hydra Chess')
 
 
-"""
 @app.route('/game/<int:game_id>', methods=['GET'])
 def game_page(game_id: int):
     game = Game.get(game_id)
@@ -71,7 +70,6 @@ def game_page(game_id: int):
 
     return render_template('game.html', title='Game - Hydra chess',
                            is_player=is_player)
-"""
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -80,17 +78,14 @@ def register():
         return redirect('/')
     form = RegisterForm()
     if form.validate_on_submit():
-        user_id = User.create_new_user(app.config['REDIS_OBJ'])
-        user = User(user_id, app.config['REDIS_OBJ'])
-        user.nickname = form.login.data
-        user.hashed_password = form.password.data
-        user.push()
+        user = User(login=form.login.data)
+        user.set_password(form.password.data)
+        user.save()
 
         login_user(user)
         return redirect('/')
 
-    return render_template('register.html', title='Register - Hydra Chess',
-                           form=form)
+    return render_template('register.html', title='Register', form=form)
 
 
 @app.route('/sign_in', methods=['GET', 'POST'])
@@ -100,33 +95,29 @@ def sign_in():
 
     form = LoginForm()
     if form.validate_on_submit():
-        user_id = User.get_user_id_by_nickname(
-            form.login.data,
-            app.config['REDIS_OBJ'])
-        if user_id != 0:
-            user = User(user_id, app.config['REDIS_OBJ'])
-            if user.check_password(form.password.data):
-                login_user(user, remember=form.remember_me.data)
-                return redirect("/")
-        return render_template('sign_in.html', title="Sign in - Hydra Chess",
-                               message="Wrong password", form=form)
+        user = User.get_by(login=form.login.data)
+        if user and user.check_password(form.password.data):
+            login_user(user, remember=form.remember_me.data)
+            return redirect("/")
+        return render_template('sign_in.html',
+                               title="Sign in",
+                               message="Wrong login or password",
+                               form=form)
     return render_template('sign_in.html', title="Sign in", form=form)
 
 
 @app.route('/user/<nickname>', methods=['GET'])
 def user_profile(nickname: str):
-    user_id = User.get_user_id_by_nickname(nickname, app.config['REDIS_OBJ'])
-    if user_id == 0:
+    user = User.get_by(login=nickname)
+    if not user:
         return render_template('404.html'), 404
-    user = User(user_id, app.config['REDIS_OBJ'])
     return render_template('user_profile.html',
-                           title=f"{user.nickname}'s profile - Hydra Chess",
-                           nickname=user.nickname,
+                           title=f"{user.login}'s profile - Hydra Chess",
+                           nickname=user.login,
                            rating=user.rating,
                            avatar_hash=user.avatar_hash)
 
 
-"""
 @sio.on('search_game')
 @authenticated_only
 def on_search_game(*args, **kwargs):
@@ -149,21 +140,19 @@ def on_search_game(*args, **kwargs):
             game = Game.get(game_id)
             if not game:
                 return
-            minutes = game.total_clock // 60
+            minutes = game.total_clock.total_seconds() // 60
         except (ValueError, TypeError):
             return
 
     game_management.search_game.delay(current_user.id, minutes * 60)
-"""
 
-"""
+
 @sio.on('cancel_search')
 @authenticated_only
 def on_cancel_search(*args, **kwargs):
     game_management.cancel_search.delay(current_user.id)
-"""
 
-"""
+
 @sio.on('resign')
 @authenticated_only
 def on_resign(*args, **kwargs) -> None:
@@ -171,7 +160,7 @@ def on_resign(*args, **kwargs) -> None:
         return
 
     game_management.resign.delay(current_user.id, current_user.cur_game_id)
-"""
+
 
 # TODO
 """
@@ -189,7 +178,7 @@ def on_send_message(*args, **kwargs) -> None:
                                                message=message)
 """
 
-"""
+
 @sio.on('connect')
 def on_connect(*args, **kwargs) -> None:
     game_id = request.args.get('game_id')
@@ -233,27 +222,24 @@ def on_connect(*args, **kwargs) -> None:
     else:
         game_management.send_game_info.delay(game_id, request.sid, False)
         join_room(game_id)
-"""
 
-"""
+
 @sio.on('make_draw_offer')
 @authenticated_only
 def on_make_draw_offer(*args, **kwargs) -> None:
     if current_user.cur_game_id:
         game_management.make_draw_offer.delay(current_user.id,
                                               current_user.cur_game_id)
-"""
 
-"""
+
 @sio.on('accept_draw_offer')
 @authenticated_only
 def on_accept_draw_offer(*args, **kwargs) -> None:
     if current_user.cur_game_id:
         game_management.accept_draw_offer.delay(current_user.id,
                                                 current_user.cur_game_id)
-"""
 
-"""
+
 @sio.on('disconnect')
 @authenticated_only
 def on_disconnect(*args, **kwargs) -> None:
@@ -261,9 +247,8 @@ def on_disconnect(*args, **kwargs) -> None:
         game_management.on_disconnect.delay(current_user.id,
                                             current_user.cur_game_id)
     game_management.cancel_search.delay(current_user.id)
-"""
 
-"""
+
 @sio.on('make_move')
 @authenticated_only
 def on_make_move(*args, **kwargs):
@@ -277,7 +262,6 @@ def on_make_move(*args, **kwargs):
             return
         if san and game_id:
             game_management.make_move.delay(user_id, game_id, san)
-"""
 
 
 @app.route('/settings', methods=['GET', 'POST'])
@@ -295,12 +279,12 @@ def settings():
         img = img.resize(new_size).convert('RGB')
 
         img_hash = uuid.uuid4().hex
-        path = sys.path[0] + \
+        path = os.path.dirname(os.path.realpath(__file__)) +\
             url_for('static', filename=f'img/profiles/{img_hash}.jpg')
         img.save(path)
 
         current_user.avatar_hash = img_hash
-        current_user.push()
+        current_user.save()
         message = "Your settings were successfuly updated!"
 
     return render_template('settings.html', title='Settings - Hydra Chess',

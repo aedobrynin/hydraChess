@@ -11,5 +11,5 @@ else
 fi
 
 
-cd ${SCRIPTS_DIR}/../hydraChess
-celery -A game_management.celery worker --concurrency 20 -Q low -n worker.low -l=WARNING
+cd ${SCRIPTS_DIR}/..
+celery -A hydraChess.game_management.celery worker --concurrency 20 -Q low -n worker.low -l=WARNING

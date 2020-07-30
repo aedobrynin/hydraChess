@@ -11,5 +11,5 @@ else
 fi
 
 
-cd ${SCRIPTS_DIR}/../hydraChess
-celery -A game_management.celery worker --concurrency 1 -Q search -n worker.searcher -l=WARNING  # DO NOT CHANGE THE CONCURRENCY VALUE
+cd ${SCRIPTS_DIR}/..
+celery -A hydraChess.game_management.celery worker --concurrency 1 -Q search -n worker.searcher -l=WARNING  # DO NOT CHANGE THE CONCURRENCY VALUE

@@ -2,10 +2,12 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 from math import ceil
 import chess
+import rom
 from celery.task.control import revoke
-from flask_celery import make_celery
-from main import app, sio
-from models import User, Game
+
+from hydraChess.flask_celery import make_celery
+from hydraChess.__main__ import app, sio
+from hydraChess.models import User, Game, GameRequest
 
 
 FIRST_MOVE_TIME_OUT = 15
@@ -18,18 +20,16 @@ celery = make_celery(app)
 @celery.task(name='send_game_info', ignore_result=True)
 def send_game_info(game_id: int, room_id: int, is_player: bool):
     request_datetime = datetime.utcnow()
-    game = Game(game_id)
+    game = Game.get(game_id)
 
     data = {
         "black_user": {"nickname": game.black_user.login,
-                       "rating": game.black_rating,
-                       "id": game.black_user.id},
+                       "rating": game.black_rating},
         "white_user": {"nickname": game.white_user.login,
-                       "rating": game.white_rating,
-                       "id": game.white_user.id},
-        "moves": game.moves,
-        "is_player": is_player
-        }
+                       "rating": game.white_rating},
+        "moves": game.raw_moves,
+        "is_player": is_player,
+    }
 
     if is_player:
         data['color'] = 'w' if game.white_user.sid == room_id else 'b'
@@ -37,9 +37,9 @@ def send_game_info(game_id: int, room_id: int, is_player: bool):
     if not game.is_finished:
         black_clock = game.black_clock
         white_clock = game.white_clock
-        if game.moves:
+        if game.raw_moves:
             next_to_move = game.get_next_to_move()
-            if next_to_move == Game.Color.WHITE:
+            if next_to_move == chess.WHITE:
                 white_clock -= request_datetime - game.last_move_datetime
             else:
                 black_clock -= request_datetime - game.last_move_datetime
@@ -48,7 +48,7 @@ def send_game_info(game_id: int, room_id: int, is_player: bool):
         data["white_clock"] = int(white_clock.total_seconds())
         if is_player:
             rating_changes = get_rating_changes(game_id)
-            if game.draw_offer_sender is Game.Color.NONE and game.get_moves_cnt() != 0:
+            if game.draw_offer_sender is None and game.get_moves_cnt() != 0:
                 data["can_send_draw_offer"] = True
             else:
                 data["can_send_draw_offer"] = False
@@ -68,17 +68,23 @@ def start_game(game_id: int) -> None:
         game.is_started = 1
 
         eta = datetime.utcnow() + timedelta(seconds=FIRST_MOVE_TIME_OUT)
-        task = on_first_move_timed_out.apply_async(args=(game_id, ),
-                                                   eta=eta)
+        task = on_first_move_timed_out.apply_async(
+            args=(game_id, ),
+            eta=eta,
+        )
 
         game.first_move_timed_out_task_id = task.id
+        game.first_move_timed_out_task_eta = eta
+
         game.save()
 
     send_game_info.delay(game_id, game.white_user.sid, True)
     send_game_info.delay(game_id, game.black_user.sid, True)
-    sio.emit('first_move_waiting',
-             {'wait_time': FIRST_MOVE_TIME_OUT},
-             room=game.white_user.sid)
+    sio.emit(
+        'first_move_waiting',
+        {'wait_time': FIRST_MOVE_TIME_OUT},
+        room=game.white_user.sid,
+    )
 
 
 @celery.task(name='make_move', ignore_result=True)
@@ -98,13 +104,13 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
     is_user_white = user_id == game.white_user.id
 
     if (is_user_white and board.turn == chess.BLACK) or\
-       (not is_user_white and board.turn == chess.WHITE):
+            (not is_user_white and board.turn == chess.WHITE):
         return
 
     try:
         with rom.util.EntityLock(game, 10, 10):
             board.push_san(move_san)
-            game.moves += (',' if game.moves else '') + move_san
+            game.append_move(move_san)
 
             if game.first_move_timed_out_task_id:
                 revoke(game.first_move_timed_out_task_id)
@@ -122,30 +128,30 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
                 game.draw_offer_sender = None
 
             if is_user_white:
-                white_clock = timedelta(seconds=game.white_clock) -\
-                        (request_datetime - (game.last_move_datetime or
-                                             request_datetime))
-                game.white_clock = white_clock.total_seconds()
+                if game.get_moves_cnt() != 1:
+                    game.white_clock -=\
+                        request_datetime - game.last_move_datetime
 
-                eta = datetime.utcnow() + timedelta(seconds=game.black_clock)
+                eta = datetime.utcnow() + game.black_clock
 
-                task = on_time_is_up.apply_async(args=(game.black_user.id,
-                                                       game_id),
-                                                 eta=eta)
+                task = on_time_is_up.apply_async(
+                    args=(game.black_user.id, game_id),
+                    eta=eta,
+                )
 
                 game.black_time_is_up_task_id = task.id
                 game.black_time_is_up_task_eta = eta
             else:
-                black_clock = timedelta(seconds=game.black_clock) -\
-                        (request_datetime - (game.last_move_datetime or
-                                             request_datetime))
-                game.black_clock = black_clock.total_seconds()
+                if game.get_moves_cnt() != 1:
+                    game.black_clock -=\
+                            request_datetime - game.last_move_datetime
 
-                eta = datetime.utcnow() + timedelta(seconds=game.white_clock)
+                eta = datetime.utcnow() + game.white_clock
 
-                task = on_time_is_up.apply_async(args=(game.white_user.id,
-                                                       game_id),
-                                                 eta=eta)
+                task = on_time_is_up.apply_async(
+                    args=(game.white_user.id, game_id),
+                    eta=eta,
+                )
 
                 game.white_time_is_up_task_id = task.id
                 game.white_time_is_up_task_eta = eta
@@ -163,12 +169,13 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
                     apply_async((game_id, ), eta=eta)
 
                 game.first_move_timed_out_task_id = task.id
+                game.first_move_timed_out_task_eta = eta
 
             game.save()
 
         data = {'san': move_san,
-                'black_clock': game.black_clock,
-                'white_clock': game.white_clock}
+                'black_clock': int(game.black_clock.total_seconds()),
+                'white_clock': int(game.white_clock.total_seconds())}
 
         sio.emit('game_updated', data, room=game_id)
         # DO NOT REMOVE NEXT STRING. SIO CAN'T EMIT TO SPECTATORS WITHOUT
@@ -198,7 +205,7 @@ def resign(user_id: int, game_id: int) -> None:
     game = Game.get(game_id)
 
     # If there is no moves in the game, just cancel it.
-    if not game.moves:
+    if not game.raw_moves:
         end_game.delay(game_id, '-', 'Game canceled.', update_stats=False)
         return
 
@@ -236,8 +243,7 @@ def reconnect(user_id: int, game_id: int) -> None:
                 game.white_disconnect_timed_out_task_id = None
                 game.save()
 
-        sio.emit('opp_reconnected',
-                 room=game.black_user.sid)
+        sio.emit('opp_reconnected', room=game.black_user.sid)
 
     else:
         send_game_info.delay(game_id, game.black_user.sid, True)
@@ -248,21 +254,44 @@ def reconnect(user_id: int, game_id: int) -> None:
                 game.black_disconnect_timed_out_task_id = None
                 game.save()
 
-        sio.emit('opp_reconnected',
-                 room=game.white_user.sid)
+        sio.emit('opp_reconnected', room=game.white_user.sid)
 
-    if is_user_white and game.black_disconnect_timed_out_task_id:
-        wait_time = (game.black_disconnect_timed_out_task_eta -
-                     datetime.utcnow()).seconds
-        sio.emit('opp_disconnected',
-                 {'wait_time': wait_time},
-                 room=game.white_user.sid)
-    elif not is_user_white and game.white_disconnect_timed_out_task_id:
-        wait_time = (game.white_disconnect_timed_out_task_eta -
-                     datetime.utcnow()).seconds
-        sio.emit('opp_disconnected',
-                 {'wait_time': wait_time},
-                 room=game.black_user.sid)
+        if is_user_white:
+            if game.first_move_timed_out_task_id and\
+                    next_to_move == chess.WHITE:
+                wait_time = (game.first_move_timed_out_task_eta -
+                             datetime.utcnow()).seconds
+                sio.emit(
+                    'first_move_waiting',
+                    {'wait_time': wait_time},
+                    room=game.white_user.sid,
+                )
+            elif game.first_move_timed_out_task_id and\
+                    next_to_move == chess.BLACK:
+                wait_time = (game.first_move_timed_out_task_eta -
+                             datetime.utcnow()).seconds
+                sio.emit(
+                    'first_move_waiting',
+                    {'wait_time': wait_time},
+                    room=game.black_user.sid,
+                )
+
+        if is_user_white and game.black_disconnect_timed_out_task_id:
+            wait_time = (game.black_disconnect_timed_out_task_eta -
+                         datetime.utcnow()).seconds
+            sio.emit(
+                'opp_disconnected',
+                {'wait_time': wait_time},
+                room=game.white_user.sid,
+            )
+        elif not is_user_white and game.white_disconnect_timed_out_task_id:
+            wait_time = (game.white_disconnect_timed_out_task_eta -
+                         datetime.utcnow()).seconds
+            sio.emit(
+                'opp_disconnected',
+                {'wait_time': wait_time},
+                room=game.black_user.sid,
+            )
 
 
 @celery.task(name="on_disconnect", ignore_result=True)
@@ -271,8 +300,10 @@ def on_disconnect(user_id: int, game_id: int) -> None:
        Emits 'opp_disconnected' to the opponent'''
 
     eta = datetime.utcnow() + timedelta(seconds=DISCONNECT_TIME_OUT)
-    task = on_disconnect_timed_out.apply_async(args=(user_id, game_id),
-                                               eta=eta)
+    task = on_disconnect_timed_out.apply_async(
+        args=(user_id, game_id),
+        eta=eta,
+    )
 
     game = Game.get(game_id)
 
@@ -297,9 +328,11 @@ def on_disconnect(user_id: int, game_id: int) -> None:
         game.save()
 
     if opp_sid:
-        sio.emit('opp_disconnected',
-                 {'wait_time': DISCONNECT_TIME_OUT},
-                 room=opp_sid)
+        sio.emit(
+            'opp_disconnected',
+            {'wait_time': DISCONNECT_TIME_OUT},
+            room=opp_sid,
+        )
 
 
 @celery.task(name='make_draw_offer', ignore_result=True)
@@ -320,8 +353,11 @@ def make_draw_offer(user_id: int, game_id: int):
         game.draw_offer_sender = user_id
         game.save()
 
-    opp_sid = game.black_user.sid if user_id == game.white_user.id\
-        else game.white_user.sid
+    opp_sid: str
+    if user_id == game.white_user.id:
+        opp_sid = game.black_user.sid
+    else:
+        opp_sid = game.white_user.sid
 
     sio.emit('draw_offer', room=opp_sid)
 
@@ -354,8 +390,10 @@ def decline_draw_offer(user_id: int, game_id: int):
 
 
 @celery.task(name='end_game', ignore_result=True)
-def end_game(game_id: int, result: str,
-             reason: str, update_stats=True) -> None:
+def end_game(game_id: int,
+             result: str,
+             reason: str,
+             update_stats=True) -> None:
     '''Marks game as finished, emits 'game_ended' signal to users,
      closes the room,
      recalculates ratings and k-factors if update_stats is True'''
@@ -414,20 +452,14 @@ def end_game(game_id: int, result: str,
         game.black_user.save()
 
     if result == "1-0":
-        update_rating.delay(game.white_user.id,
-                            rating_changes["w"].win)
-        update_rating.delay(game.black_user.id,
-                            rating_changes["b"].lose)
+        update_rating.delay(game.white_user.id, rating_changes["w"].win)
+        update_rating.delay(game.black_user.id, rating_changes["b"].lose)
     elif result == "1/2-1/2":
-        update_rating.delay(game.white_user.id,
-                            rating_changes["w"].draw)
-        update_rating.delay(game.black_user.id,
-                            rating_changes["b"].draw)
+        update_rating.delay(game.white_user.id, rating_changes["w"].draw)
+        update_rating.delay(game.black_user.id, rating_changes["b"].draw)
     elif result == "0-1":
-        update_rating.delay(game.white_user.id,
-                            rating_changes["w"].lose)
-        update_rating.delay(game.black_user.id,
-                            rating_changes["b"].win)
+        update_rating.delay(game.white_user.id, rating_changes["w"].lose)
+        update_rating.delay(game.black_user.id, rating_changes["b"].win)
 
     update_k_factor.delay(game.white_user.id)
     update_k_factor.delay(game.black_user.id)
@@ -487,7 +519,7 @@ def on_time_is_up(user_id: int, game_id: int) -> None:
     reason: str
     # Finish game with draw if other player has insufficient material to win
     if (is_user_white and board.has_insufficient_material(chess.BLACK)) or\
-       (not is_user_white and board.has_insufficient_material(chess.WHITE)):
+            (not is_user_white and board.has_insufficient_material(chess.WHITE)):
         result = "1/2-1/2"
 
         if user_id == game.white_user.id:
@@ -529,8 +561,7 @@ class RatingChange:
 
 def get_rating_changes(game_id: int) -> Dict[str, RatingChange]:
     '''Returns rating changes for game in dict.
-       Example: {'w': RatingChange,
-                 'b': RatingChange}'''
+        Example: {"w": RatingChange, "b": RatingChange}'''
     game = Game.get(game_id)
     r_white = game.white_user.rating
     r_black = game.black_user.rating
@@ -585,14 +616,13 @@ def search_game(user_id: int, seconds: int) -> None:
     user = User.get(user_id)
     with rom.util.EntityLock(user, 10, 10):
         game_requests = \
-            rom.query.Query(GameRequest).filter(time=seconds).all()
+                rom.query.Query(GameRequest).filter(time=seconds).all()
 
         added_to_existed = False
         if game_requests:
             accepted_request = \
                 min(game_requests,
-                    key=lambda x: abs(User.get(x.user_id).rating -
-                                      user.rating))
+                    key=lambda x: abs(User.get(x.user_id).rating - user.rating))
             if abs(user.rating -
                    User.get(accepted_request.user_id).rating) <= 200:
                 added_to_existed = True
@@ -600,38 +630,44 @@ def search_game(user_id: int, seconds: int) -> None:
                 accepted_request.delete()
                 user_to_play_with = User.get(accepted_request.user_id)
 
-                game = Game(white_user=user,
-                            black_user=user_to_play_with,
-                            total_clock=seconds,
-                            white_clock=seconds,
-                            black_clock=seconds,
-                            white_rating=user.rating,
-                            black_rating=user_to_play_with.rating,
-                            is_started=0)
+                game = Game(
+                    white_user=user,
+                    black_user=user_to_play_with,
+                    white_rating=user.rating,
+                    black_rating=user_to_play_with.rating,
+                    is_started=0,
+                )
+                tdelta = timedelta(seconds=seconds)
+                game.total_clock = tdelta
+                game.white_clock = tdelta
+                game.black_clock = tdelta
                 game.save()
 
                 user.cur_game_id = game.id
-                user.add_game_id(game.id)
                 user.save()
 
                 with rom.util.EntityLock(user_to_play_with, 10, 10):
                     user_to_play_with.cur_game_id = game.id
-                    user_to_play_with.add_game_id(game.id)
                     user_to_play_with.in_search = False
                     user_to_play_with.save()
 
-                sio.emit('redirect', {'url': f'/game/{game.id}'},
-                         room=user.sid)
-                sio.emit('redirect', {'url': f'/game/{game.id}'},
-                         room=user_to_play_with.sid)
+                sio.emit(
+                    'redirect',
+                    {'url': f'/game/{game.id}'},
+                    room=user.sid,
+                )
+                sio.emit(
+                    'redirect',
+                    {'url': f'/game/{game.id}'},
+                    room=user_to_play_with.sid,
+                )
                 start_game.delay(game.id)
 
         if added_to_existed is False:
             user.in_search = True
             user.save()
 
-            game_request = GameRequest(time=seconds,
-                                       user_id=user_id)
+            game_request = GameRequest(time=seconds, user_id=user_id)
             game_request.save()
 
 
@@ -647,7 +683,6 @@ def cancel_search(user_id: int):
         user.in_search = False
         user.save()
 
-    game_request = GameRequest.get_by(user_id=user_id,
-                                      _limit=(0, 1))
+    game_request = GameRequest.get_by(user_id=user_id, _limit=(0, 1))
     if game_request:
         game_request[0].delete()
