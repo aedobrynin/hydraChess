@@ -16,7 +16,6 @@ from flask_login import current_user, login_required
 from hydraChess.config import ProductionConfig, TestingConfig
 from hydraChess.models import User, Game
 from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
-from hydraChess import game_management
 
 
 app = Flask(__name__)
@@ -29,6 +28,8 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 sio = SocketIO(app, message_queue=app.config['CELERY_BROKER_URL'])
+
+from hydraChess import game_management
 
 
 def authenticated_only(func):
