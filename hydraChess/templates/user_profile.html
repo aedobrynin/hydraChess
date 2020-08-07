@@ -18,18 +18,27 @@
       </div>
     </div>
     <div class="d-flex flex-column">
-      <h1 class='text-light'>Latest games</h1>
-      <table class='table table-light' id='latest_games'>
-        <thead>
-          <tr>
-            <th scope='col'>White player</th>
-            <th scope='col'>Black player</th>
-            <th scope='col'>Result</th>
-          </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
+      <div id='latest_games' style="display: none">
+        <h1 class='text-light'>Latest games</h1>
+        <div id='select_buttons_container'>
+          <button id='first_page_select'>First</button>
+          <button id='prev_page_select'><</button>
+          <span id='cur_page_container' class='text-light font-weight-bold'></span>
+          <button id='next_page_select'>></button>
+          <button id='last_page_select'>Last</button>
+        </div>
+        <table class='table table-light'>
+          <thead>
+            <tr>
+              <th scope='col'>White player</th>
+              <th scope='col'>Black player</th>
+              <th scope='col'>Result</th>
+            </tr>
+          </thead>
+          <tbody id='games_container'>
+          </tbody>
+        </table>
+        </div>
     </div>
   </div>
 </body>
@@ -37,12 +46,79 @@
 {% endblock %}
 
 {% block extra_scripts %}
-
 <script>
+;(function() {
+  const games_on_page = 10
+  var games_played
+  var total_pages
+  var cur_page = 1
+  var $buttons_container = $('#select_buttons_container')
+  var $first_page_select = $('#first_page_select')
+  var $prev_page_select = $('#prev_page_select')
+  var $next_page_select = $('#next_page_select')
+  var $last_page_select = $('#last_page_select')
+  var $cur_page_container = $('#cur_page_container')
+  var $games_container = $('#games_container')
+
+
+  function set_pages(data) {
+    games_played = data['games_played']
+    total_pages = Math.ceil(games_played / games_on_page)
+
+    if (games_played === 0) {
+      return
+    }
+
+    $('#latest_games').show()
+    $first_page_select.attr('page-select', 1)
+    $first_page_select.prop('disabled', true)
+
+    $prev_page_select.attr('page-select', 0)
+    $prev_page_select.prop('disabled', true)
+
+    $next_page_select.attr('page-select', 2)
+    $next_page_select.prop('disabled', cur_page === total_pages)
+
+    $last_page_select.attr('page-select', total_pages)
+    $last_page_select.prop('disabled', total_pages === 1)
+
+    $cur_page_container.html('1')
+  }
+
+
+  $('body').on('click', 'button[page-select]', function() {
+    cur_page = parseInt(this.getAttribute('page-select'))
+
+    $first_page_select.prop('disabled', cur_page === 1)
+
+    $prev_page_select.attr('page-select', cur_page - 1)
+    $prev_page_select.prop('disabled', cur_page === 1)
+
+    $next_page_select.attr('page-select', cur_page + 1)
+    $next_page_select.prop('disabled', cur_page === total_pages)
+
+    $last_page_select.prop('disabled', cur_page === total_pages)
+
+    $cur_page_container.html(cur_page)
+
+    $.get(
+      "/api/v1.x/games_list",
+      {
+        nickname: "{{ nickname }}",
+        size: games_on_page,
+        start_from: (cur_page - 1) * games_on_page
+      },
+      show_latest_games,
+    )
+
+  })
+
+
   function show_latest_games(data) {
+    $games_container.html('')
+
     data['games'].forEach(function(item) {
-      $('#latest_games').
-        find('tbody:last').
+      $games_container.
         append(`<tr data-href='/game/${item.id}' style="cursor: pointer">
                 <td><a href='/user/${item.white_player}'>${item.white_player}</a></td>
                 <td><a href='/user/${item.black_player}'>${item.black_player}</a></td>
@@ -53,14 +129,25 @@
   }
 
   $.get(
+    "/api/v1.x/games_played",
+    {
+      nickname: "{{ nickname }}"
+    },
+    set_pages
+  )
+
+  $.get(
     "/api/v1.x/games_list",
-    {nickname: "{{ nickname }}"},
+    {
+      nickname: "{{ nickname }}",
+      size: games_on_page
+    },
     show_latest_games,
   )
 
   $('body').on('click', 'tr[data-href]', function() {
     document.location = $(this).data('href');
 	});
+})()
 </script>
-
 {% endblock %}
