@@ -9,6 +9,7 @@ class ProductionConfig:
     PORT = 8000
     HOST = f"http://localhost:{PORT}/"
 
+
 class TestingConfig:
     DEBUG = True
     TESTING = True
