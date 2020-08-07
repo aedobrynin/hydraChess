@@ -37,12 +37,7 @@ class GamesList(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('nickname', type=str, required=True)
     parser.add_argument('start_from', type=int, default=0)
-    parser.add_argument(
-        'size',
-        type=int,
-        default=10,
-        choices=(10, 20, 50, 100)
-    )
+    parser.add_argument('size', type=int, default=10, choices=(10, 20, 50, 100))
 
     def get(self):
         args = self.parser.parse_args()
@@ -66,3 +61,35 @@ class GamesList(Resource):
             games.append(cur_game)
 
         return {"games": games}, 200
+
+
+class GameResource(Resource):
+    parser = reqparse.RequestParser()
+    parser.add_argument('id', type=int, required=True)
+
+    def get(self):
+        args = self.parser.parse_args()
+        game_id = args['id']
+        game = Game.get(game_id)
+
+        if not game:
+            return {"message": "Game doesn't exist"}, 400
+
+        if not game.is_finished:
+            return {
+                "message": "Game isn't accessible by this way right now"
+            }, 403
+
+        game_data = dict()
+        game_data["white_user"] = {
+            "nickname": game.white_user.login,
+            "rating": game.white_rating
+        }
+        game_data["black_user"] = {
+            "nickname": game.black_user.login,
+            "rating": game.black_rating
+        }
+        game_data["result"] = game.result
+        game_data["moves"] = game.raw_moves
+
+        return {"game": game_data}, 200

@@ -33,7 +33,7 @@ from flask_restful import Api
 from hydraChess.config import ProductionConfig
 from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
 from hydraChess.models import User, Game
-from hydraChess.resources import GamesPlayed, GamesList
+from hydraChess.resources import GamesPlayed, GamesList, GameResource
 
 
 app = Flask(__name__)
@@ -50,6 +50,7 @@ sio = SocketIO(app, message_queue=app.config['SOCKET_IO_URL'])
 api = Api(app)
 api.add_resource(GamesPlayed, '/api/v1.x/games_played/')
 api.add_resource(GamesList, '/api/v1.x/games_list/')
+api.add_resource(GameResource, '/api/v1.x/game/')
 
 
 from hydraChess import game_management
