@@ -3,6 +3,7 @@
 Hydra Chess is a Flask application to play chess online
 Tested on Python 3.7+ (PyPy 7.3.1+) and Redis 5.0.5
 ![Interface](https://raw.githubusercontent.com/hashlib/hydraChess/master/hydraChess/static/img/hydra_chess.png)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhashlib%2FhydraChess.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fhashlib%2FhydraChess?ref=badge_shield)
 
 ## Prerequisites
 
@@ -34,6 +35,9 @@ In tmux everything looks like this:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhashlib%2FhydraChess.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fhashlib%2FhydraChess?ref=badge_large)
 
 ## Libraries used
 
