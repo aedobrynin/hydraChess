@@ -1,3 +1,20 @@
+# This file is part of the hydraChess project.
+# Copyright (C) 2019-2020 Anton Dobrynin <hashlib@yandex.ru>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+
 import unittest
 from datetime import timedelta
 from chess import Board, WHITE, BLACK
@@ -92,6 +109,36 @@ class TestGame(unittest.TestCase):
             game.delete()
         self.used_game_ids.clear()
 
+        for user_id in self.used_user_ids:
+            user = User.get(user_id)
+            user.delete()
+        self.used_user_ids.clear()
+
+
+class TestUser(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        rom.util.set_connection_settings(db=TestingConfig.REDIS_DB_ID)
+
+    def setUp(self):
+        self.used_user_ids = list()
+
+    def test_game_ids_and_append_game_id(self):
+        user = User()
+        user.save()
+        self.used_user_ids.append(user.id)
+
+        self.assertEqual(user.game_ids, [])
+
+        expected = []
+        for game_id in range(10):
+            expected.insert(0, game_id)
+            user.append_game_id(game_id)
+            user.save()
+            user.refresh()
+            self.assertEqual(expected, user.game_ids)
+
+    def tearDown(self):
         for user_id in self.used_user_ids:
             user = User.get(user_id)
             user.delete()

@@ -1,8 +1,24 @@
+# This file is part of the hydraChess project.
+# Copyright (C) 2019-2020 Anton Dobrynin <hashlib@yandex.ru>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+
 from gevent import monkey
 monkey.patch_all()
 
 import os
-import sys
 import uuid
 from io import BytesIO
 from PIL import Image
@@ -13,9 +29,11 @@ import rom.util
 from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
-from hydraChess.config import ProductionConfig, TestingConfig
+from flask_restful import Api
+from hydraChess.config import ProductionConfig
 from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
 from hydraChess.models import User, Game
+from hydraChess.resources import GamesPlayed, GamesList
 
 
 app = Flask(__name__)
@@ -27,7 +45,12 @@ rom.util.use_null_session()
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-sio = SocketIO(app, message_queue=app.config['CELERY_BROKER_URL'])
+sio = SocketIO(app, message_queue=app.config['SOCKET_IO_URL'])
+
+api = Api(app)
+api.add_resource(GamesPlayed, '/api/v1.x/games_played/')
+api.add_resource(GamesList, '/api/v1.x/games_list/')
+
 
 from hydraChess import game_management
 
@@ -310,5 +333,9 @@ def page_not_found(e):
 
 
 if __name__ == '__main__':
-    # SET DEBUG TO FALSE IN PRODUCTION
-    sio.run(app, port=8000, debug=True)
+    #  Set debug to False in production
+    sio.run(
+        app,
+        port=app.config['PORT'],
+        debug=True,
+    )

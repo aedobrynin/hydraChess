@@ -1,4 +1,4 @@
-.swp
+*.swp
 dev/*
 dev_pypy/*
 hydraChess/static/img/profiles/*
