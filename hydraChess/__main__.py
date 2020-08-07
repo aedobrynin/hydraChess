@@ -2,7 +2,6 @@ from gevent import monkey
 monkey.patch_all()
 
 import os
-import sys
 import uuid
 from io import BytesIO
 from PIL import Image
@@ -14,7 +13,7 @@ from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 from flask_restful import Api
-from hydraChess.config import ProductionConfig, TestingConfig
+from hydraChess.config import ProductionConfig
 from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
 from hydraChess.models import User, Game
 from hydraChess.resources import GamesPlayed, GamesList

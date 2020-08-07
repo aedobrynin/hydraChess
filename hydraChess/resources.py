@@ -2,7 +2,6 @@ from flask_restful import Resource, reqparse
 from hydraChess.models import User, Game
 
 
-
 class GamesPlayed(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('nickname', type=str, required=True)
@@ -21,7 +20,12 @@ class GamesList(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('nickname', type=str, required=True)
     parser.add_argument('start_from', type=int, default=0)
-    parser.add_argument('size', type=int, default=10, choices=(10, 20, 50, 100))
+    parser.add_argument(
+        'size',
+        type=int,
+        default=10,
+        choices=(10, 20, 50, 100)
+    )
 
     def get(self):
         args = self.parser.parse_args()
@@ -38,7 +42,7 @@ class GamesList(Resource):
         for game in Game.get(game_ids):
             cur_game = {
                 'white_player': game.white_user.login,
-                'black_player':game.black_user.login,
+                'black_player': game.black_user.login,
                 'id': game.id,
                 'result': game.result,
             }
