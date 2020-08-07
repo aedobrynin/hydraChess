@@ -19,7 +19,7 @@ humanize==2.5.0
 idna==2.10
 itsdangerous==1.1.0
 Jinja2==2.11.2
-kombu==5.0.0
+kombu==4.6.11
 MarkupSafe==1.1.1
 Pillow==7.2.0
 prometheus-client==0.8.0
