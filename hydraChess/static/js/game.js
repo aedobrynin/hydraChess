@@ -189,7 +189,6 @@
       game.move(move)
     })
 
-    animation = true
     board.position(game.fen())
 
     highlightLastMove()
@@ -270,7 +269,7 @@
     }
 
     $('#draw_btn').prop('disabled', false)
- }
+  }
 
   function onGameEnded(data) {
     /*
@@ -596,7 +595,9 @@
   $('body').on('click', '.halfmove', function() {
     $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
     var newMoveIndx = parseInt(this.id.slice(5))
-    if (newMoveIndx === moveIndx)      { return }
+    if (newMoveIndx === moveIndx) {
+      return
+    }
 
     while (newMoveIndx < moveIndx) {
       moveIndx -= 1
