@@ -62,17 +62,28 @@ class TestGamesApi(unittest.TestCase):
             'submit': 'Register'
         }
 
-        resp = requests.post(
+        self.session = requests.Session()
+
+        resp = self.session.post(
             app.config['HOST'] + 'register',
             data=self.user_data,
         )
+        self.session.close()
 
         self.assertIn('lobby', resp.url)
 
-    def test_games_played_bad_login(self):
-        nonexistent_login = uuid4().hex
+    def test_games_played_no_nickname(self):
         url = app.config['HOST'] + 'api/v1.x/games_played'
-        resp = requests.get(url, data={'nickname': nonexistent_login})
+        resp = requests.get(url)
+        json = resp.json()
+        self.assertIn('message', json)
+        self.assertIn('nickname', json['message'])
+        self.assertEqual(resp.status_code, 400)
+
+    def test_games_played_bad_nickname(self):
+        nonexistent_nickname = uuid4().hex
+        url = app.config['HOST'] + 'api/v1.x/games_played'
+        resp = requests.get(url, data={'nickname': nonexistent_nickname})
         self.assertEqual(resp.json(), {'message': "User doesn't exist"})
         self.assertEqual(resp.status_code, 400)
 
@@ -87,10 +98,18 @@ class TestGamesApi(unittest.TestCase):
             self.assertEqual(resp.json(), {'games_played': i})
             self.assertEqual(resp.status_code, 200)
 
-    def test_games_list_bad_login(self):
-        nonexistent_login = uuid4().hex
+    def test_games_list_no_nickname(self):
         url = app.config['HOST'] + 'api/v1.x/games_list'
-        resp = requests.get(url, data={'nickname': nonexistent_login})
+        resp = requests.get(url)
+        json = resp.json()
+        self.assertIn('message', json)
+        self.assertIn('nickname', json['message'])
+        self.assertEqual(resp.status_code, 400)
+
+    def test_games_list_bad_nickname(self):
+        nonexistent_nickname = uuid4().hex
+        url = app.config['HOST'] + 'api/v1.x/games_list'
+        resp = requests.get(url, data={'nickname': nonexistent_nickname})
         self.assertEqual(resp.json(), {'message': "User doesn't exist"})
         self.assertEqual(resp.status_code, 400)
 
@@ -192,7 +211,7 @@ class TestGamesApi(unittest.TestCase):
             self.assertIsInstance(resp.json()["games"], list)
             self.assertEqual(len(resp.json()["games"]), size_val)
 
-    def test_response_on_valid_request(self):
+    def test_games_list_response_on_valid_request(self):
         game = Game()
         white_user = User.get_by(login=self.user_data['login'])
         black_user = User(login=uuid4().hex[:15])
@@ -246,6 +265,122 @@ class TestGamesApi(unittest.TestCase):
                     response_data = json["games"][i - start_from_val]
 
                     self.assertEqual(expected_data, response_data)
+
+    def test_game_resource_no_id(self):
+        url = app.config['HOST'] + 'api/v1.x/game'
+        resp = requests.get(url)
+        json = resp.json()
+        self.assertIn('message', json)
+        self.assertIn('id', json['message'])
+        self.assertEqual(resp.status_code, 400)
+
+    def test_game_resource_bad_id_type(self):
+        url = app.config['HOST'] + 'api/v1.x/game'
+        resp = requests.get(url, data={'id': "test"})
+        json = resp.json()
+        self.assertIn('message', json)
+        self.assertIn('id', json['message'])
+        self.assertEqual(resp.status_code, 400)
+
+    def test_game_resource_bad_id_value(self):
+        url = app.config['HOST'] + 'api/v1.x/game'
+        resp = requests.get(url, data={'id': 0})
+        json = resp.json()
+        self.assertIn('message', json)
+        self.assertEqual(json['message'], "Game doesn't exist")
+        self.assertEqual(resp.status_code, 400)
+
+    def test_game_resource_access_to_live_game(self):
+        game = Game()
+        game.save()
+        game_id = game.id
+
+        url = app.config['HOST'] + 'api/v1.x/game'
+        resp = requests.get(url, data={'id': game_id})
+        json = resp.json()
+        self.assertIn('message', json)
+        self.assertEqual(
+            json['message'],
+            "Game isn't accessible by this way right now"
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_game_resource_response_on_valid_request_not_player(self):
+        white_user = User(login=uuid4().hex, rating=1412)
+        black_user = User(login=uuid4().hex, rating=1522)
+        white_user.save()
+        black_user.save()
+        game = Game(
+            white_user=white_user,
+            black_user=black_user,
+            raw_moves="e4,e5,Nf3,Nc6,Bb5,a6",
+            is_finished=True,
+            result="1/2-1/2"
+        )
+        game.save()
+
+        game_id = game.id
+        url = app.config['HOST'] + 'api/v1.x/game'
+        resp = requests.get(url, data={'id': game_id})
+        actual_json = resp.json()
+
+        expected_json = {
+            "game": {
+                "white_user": {
+                    "rating": game.white_rating,
+                    "nickname": game.white_user.login
+                },
+                "black_user": {
+                    "rating": game.black_rating,
+                    "nickname": game.black_user.login
+                },
+                "moves": game.raw_moves,
+                "result": game.result
+            }
+        }
+
+        self.assertEqual(actual_json, expected_json)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_game_resource_response_on_valid_request_is_player(self):
+        white_user = User.get_by(login=self.user_data['login'])
+        white_user.rating = 1231
+        black_user = User(login=uuid4().hex, rating=1522)
+        white_user.save()
+        black_user.save()
+        game = Game(
+            white_user=white_user,
+            black_user=black_user,
+            raw_moves="e4,e5,Nf3,Nc6,Bb5,a6",
+            is_finished=True,
+            result="1/2-1/2"
+        )
+        game.save()
+
+        game_id = game.id
+        url = app.config['HOST'] + 'api/v1.x/game'
+        resp = self.session.get(url, data={'id': game_id})
+        actual_json = resp.json()
+        self.session.close()
+
+        expected_json = {
+            "game": {
+                "white_user": {
+                    "rating": game.white_rating,
+                    "nickname": game.white_user.login
+                },
+                "black_user": {
+                    "rating": game.black_rating,
+                    "nickname": game.black_user.login
+                },
+                "moves": game.raw_moves,
+                "result": game.result,
+                "color": "w"
+            }
+        }
+
+        self.assertEqual(actual_json, expected_json)
+        self.assertEqual(resp.status_code, 200)
 
     @classmethod
     def tearDownClass(cls):
