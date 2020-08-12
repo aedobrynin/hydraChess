@@ -1,45 +1,54 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% set any_error = False %}
 <body>
-  <form class="basic-form mt-2" action="" method="post">
-    <h1 align='center'>Register</h1>
-    {{ form.csrf_token }}
-
-    <div class="form-group">
-      {{ form.login.label }}<br>
-      {{ form.login(class="form-control") }}
-
-      {% if form.login.errors %}
-      <div class="m-0 p-0 mb-2 error-message">
-        {{ form.login.errors[0] }}
-      </div>
-      {% endif %}
-    </div>
-    <div class="form-group">
-      {{ form.password.label }}<br>
-      {{ form.password(class="form-control",
-      type="password") }}
-
-      {% if form.password.errors %}
-      <div class="m-0 p-0 mb-2 error-message">
-        {{ form.password.errors[0] }}
-      </div>
-      {% endif %}
-
-      {{ form.confirm_password.label }}<br>
-      {{ form.confirm_password(class="form-control", type="password") }}
-
-      {% if form.confirm_password.errors %}
-        <div class="m-0 p-0 mb-2 error-message">
-          {{ form.confirm_password.errors[0] }}
+  <div class="container">
+    <div class="columns is-centered pt-1">
+      <div class="column is-one-third">
+        <div class="box" action="" method="post">
+          <form action="" method="post">
+            {{ form.csrf_token }}
+            <div class="field">
+              <label class="label">{{ form.login.label }}</label>
+              <div class="control">
+                {{ form.login(class="input") }}
+              </div>
+              {% if form.login.errors %}
+                <p class="help is-danger">{{ form.login.errors[0] }}</p>
+                {% set any_error = True %}
+              {% endif %}
+            </div>
+            <div class="field">
+              <label class="label">{{ form.password.label }}</label>
+              <div class="control">
+                {{ form.password(class="input", type="password") }}
+                {% if form.password.errors and not any_error %}
+                  <p class="help is-danger">{{ form.password.errors[0] }}</p>
+                  {% set any_error = True %}
+                {% endif %}
+              </div>
+            </div>
+            <div class="field">
+              <label class="label"> {{ form.confirm_password.label }}</label>
+              <div class="control">
+                {{ form.confirm_password(class="input", type="password") }}
+                {% if form.confirm_password.errors and not any_error %}
+                  <p class="help is-danger">{{ form.confirm_password.errors[0] }}</p>
+                  {% set any_error = True %}
+                {% endif %}
+              </div>
+            </div>
+            <div class="field has-text-centered">
+              <div class="control">
+                {{ form.submit(class="button is-link", type="submit") }}
+              </div>
+            </div>
+          </form>
         </div>
-      {% endif %}
+      </div>
     </div>
-    <div class="text-center">
-      {{ form.submit(type="submit", class="btn w-100 submit-button") }}
-    </div>
-  </form>
+  </div>
 </body>
 {% endblock %}
 

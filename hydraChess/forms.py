@@ -34,7 +34,7 @@ def login_content_validator(form, field):
                                       'underscore are allowed'))
 
     if User.get_by(login=login.encode()):
-        raise StopValidation(message=('Login already taken'))
+        raise StopValidation(message=('Nickname already taken'))
 
 
 def password_content_validator(form, field):
@@ -55,16 +55,16 @@ def image_content_validator(form, field):
 
 class RegisterForm(FlaskForm):
     login = \
-        StringField('Login',
+        StringField('Nickname',
                     validators=[validators.DataRequired(),
                                 login_content_validator,
                                 validators.Length(min=3,
-                                                  message=("Login can't be "
+                                                  message=("Nickname can't be "
                                                            "shorter than "
                                                            "%(min)d "
                                                            "characters")),
                                 validators.Length(max=20,
-                                                  message=("Login can't be "
+                                                  message=("Nickname can't be "
                                                            "longer than "
                                                            "%(max)d "
                                                            "characters"))])
@@ -95,7 +95,7 @@ class RegisterForm(FlaskForm):
 
 
 class LoginForm(FlaskForm):
-    login = StringField('Login', validators=[validators.DataRequired()])
+    login = StringField('Nickname', validators=[validators.DataRequired()])
     password = PasswordField('Password',
                              validators=[validators.DataRequired()])
 
