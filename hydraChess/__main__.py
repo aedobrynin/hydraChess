@@ -354,7 +354,6 @@ if __name__ == '__main__':
             output_style='compressed'
         )
 
-
     path_to_bulma_css =\
         os.path.join(app.root_path, app.static_url_path[1:], 'css/bulma.css')
 
