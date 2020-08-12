@@ -12,15 +12,33 @@
 				<a class="navbar-item is-size-5" href="/">
           <b>Hydra Chess</b>
 				</a>
-				<a id='navbar-toggle' role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
-					<span aria-hidden="true"></span>
-					<span aria-hidden="true"></span>
-					<span aria-hidden="true"></span>
-				</a>
+        <a id='navbar-toggle' role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
 			</div>
       {% if current_user.is_authenticated %}
+        <div class='navbar-menu navbar-end'>
+          <div class='navbar-item has-dropdown is-hoverable'>
+            <a class='navbar-link is-arrowless'>
+              {{ current_user.login }}
+            </a>
+            <div class='navbar-dropdown is-right'>
+              <a href='/user/{{ current_user.login }}' class='navbar-item'>
+                Profile
+              </a>
+              <a href='/settings' class='navbar-item'>
+                Settings
+              </a>
+              <a href='/logout' class='navbar-item'>
+                Logout
+              </a>
+            </div>
+          </div>
+        </div>
       {% else %}
-        <div id='navbar-menu' class="navbar-menu navbar-end">
+        <div class="navbar-menu navbar-end">
           <div class="buttons">
 						<a href='/sign_up' class="button is-primary">
 							<strong>Sign up</strong>
@@ -41,8 +59,8 @@
 		$('#navbar-toggle').click(
 			function() {
 				$(this).toggleClass('is-active')
-				$('#navbar-menu').toggleClass('is-active')
-        $('#navbar-menu').find('.button').toggleClass('is-fullwidth mx-3')
+				$('.navbar-menu').toggleClass('is-active')
+        $('.navbar-menu').find('.button').toggleClass('is-fullwidth mx-3')
 			}
 		)
 	</script>
