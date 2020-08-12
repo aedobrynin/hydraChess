@@ -96,8 +96,8 @@ def game_page(game_id: int):
     return render_template('game.html', title='Game - Hydra chess')
 
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
+@app.route('/sign_up', methods=['GET', 'POST'])
+def sign_up():
     if current_user.is_authenticated:
         return redirect('/')
     form = RegisterForm()

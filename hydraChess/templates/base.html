@@ -2,78 +2,49 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,
-    initial-scale=1,
-    shrink-to-fit=no">
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.min.css"
-          integrity="sha256-L/W5Wfqfa0sdBNIKN9cG6QA5F2qx4qICmU2VgLruv9Y="
-          crossorigin="anonymous" />
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.0/css/bulma.min.css" integrity="sha512-ADrqa2PY1TZtb/MoLZIZu/Z/LlPaWQeDMBV73EMwjGam43/JJ5fqW38Rq8LJOVGCDfrJeOMS3Q/wRUVzW5DkjQ==" crossorigin="anonymous" />
     <title>{{ title }}</title>
   </head>
-  <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-    <a class="navbar-brand mr-auto" href="{{ url_for('index') }} ">Hydra Chess</a>
-    <button id="navbar_toggler" class="navbar-toggler" type="button"
-            data-toggle="collapse" data-target="#collapse_elements"
-            aria-controls="collapse_elements" aria-expanded="false"
-            aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="collapse_elements">
-      <ul class="nav navbar-nav ml-auto">
-        {% if current_user.is_authenticated %}
-        <!-- This element are for not collapsed navbar -->
-         <li class="dropdown d-none d-md-block">
-          <a class="nav-link dropdown-toggle" href="#" id="navbar_dropdown"
-             role="button" data-toggle="dropdown" aria-haspopup="true"
-             aria-expanded="false" style="min-width: 150px">{{current_user.login}}</a>
-          <!--FIXME-->
-          <div class="dropdown-menu bg-dark" aria-labelledby="navbar_dropdown">
-            <a class="dropdown-item text-white" href="{{ url_for("user_profile", nickname=current_user.login) }}">Profile</a>
-            <a class="dropdown-item text-white" href="{{ url_for("settings") }}">Settings</a>
-            <a class="dropdown-item text-white" href="{{ url_for("logout") }}">
-              Logout</a>
-          </div>
-        </li>
-
-        <!-- This element are for collapsed navbar -->
-        <li class="nav-item d-md-none">
-          <a class="nav-link" href="{{ url_for("user_profile", nickname=current_user.login) }}">Profile</a>
-          <a class="nav-link" href="{{ url_for("settings") }}">Settings</a>
-          <a class="nav-link" href="{{ url_for("logout") }}">Logout</a>
-        </li>
-        {% else %}
-        <!-- This elements are for not collapsed navbar -->
-        <li class="nav-item d-none d-md-block">
-          <a class="btn btn-outline-secondary"
-             href="{{ url_for("register") }}">Register</a>
-        </li>
-        <li class="nav-item d-none d-md-block ml-1">
-          <a class="btn btn-outline-success" href="{{ url_for("sign_in") }}">Sign in</a>
-        </li>
-
-        <!-- This elements are for collapsed navbar -->
-       <li class="nav-item d-md-none">
-          <a class="nav-link" href="{{ url_for("register") }}">Register</a>
-        </li>
-        <li class="nav-item d-md-none">
-          <a class="nav-link" href="{{ url_for("sign_in") }}">Sign in</a>
-        </li>
-        {% endif %}
-      </ul>
-    </div>
-  </nav>
+  <nav class="navbar has-shadow" role="navigation" aria-label="main navigation">
+		<div class="container">
+			<div class="navbar-brand">
+				<a class="navbar-item is-size-5" href="/">
+          <b>Hydra Chess</b>
+				</a>
+				<a id='navbar-toggle' role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+					<span aria-hidden="true"></span>
+					<span aria-hidden="true"></span>
+					<span aria-hidden="true"></span>
+				</a>
+			</div>
+      {% if current_user.is_authenticated %}
+      {% else %}
+        <div id='navbar-menu' class="navbar-menu navbar-end">
+          <div class="buttons">
+						<a href='/sign_up' class="button is-primary">
+							<strong>Sign up</strong>
+						</a>
+						<a href='sign_in' class="button is-light">
+							Log in
+						</a>
+					</div>
+				</div>
+      {% endif %}
+		</div>
+	</nav>
   {% block content %}{% endblock %}
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
 					integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
 					crossorigin="anonymous"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
-          integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
-          crossorigin="anonymous"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
-          integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
-          crossorigin="anonymous"></script>
-  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
+	<script>
+		$('#navbar-toggle').click(
+			function() {
+				$(this).toggleClass('is-active')
+				$('#navbar-menu').toggleClass('is-active')
+        $('#navbar-menu').find('.button').toggleClass('is-fullwidth mx-3')
+			}
+		)
+	</script>
   {% block extra_scripts %}{% endblock %}
 </html>
