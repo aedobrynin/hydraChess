@@ -17,6 +17,7 @@
 
 from io import BytesIO
 import imghdr
+from PIL import Image
 import re
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
@@ -51,6 +52,9 @@ def image_content_validator(form, field):
     raw_img = BytesIO(image.read())
     if imghdr.what(raw_img) is None:
         raise StopValidation(message=("Can't read image data"))
+    img = Image.open(raw_img)
+    if img.width < 300 or img.height < 300:
+        raise StopValidation(message=("Image size must be at least 300x300"))
 
 
 class SignUpForm(FlaskForm):
@@ -104,7 +108,7 @@ class LoginForm(FlaskForm):
 
 
 class SettingsForm(FlaskForm):
-    image = FileField('Profile image',
+    image = FileField('Profile picture',
                       validators=[FileRequired(),
                                   FileAllowed(['jpg', 'png', 'jpeg'],
                                               ('Only .png, .jpg, .jpeg '

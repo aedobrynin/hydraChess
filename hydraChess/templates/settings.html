@@ -1,7 +1,49 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% set error_shown = False %}
+<body>
+  <div class="container">
+    <div class="columns is-centered pt-1">
+      <div class="column is-one-third">
+        <div class="box">
+          <h1 class="title">Settings</h1>
+          <form method="post" enctype="multipart/form-data">
+            {{ form.csrf_token }}
 
+						<div class="field">
+							<div class="file has-name is-fullwidth">
+								<label class="file-label">
+									{{ form.image(class="file-input", type="file") }}
+									<span class="file-cta">
+										<span class="file-label">
+											{{ form.image.label }}
+										</span>
+									</span>
+									<span class="file-name"></span>
+								</label>
+							</div>
+							{% if form.image.errors and not error_shown %}
+								<p class="help is-danger">{{ form.image.errors[0] }}</p>
+								{% set error_shown = True %}
+							{% endif %}
+						</div>
+            <div class="field">
+              <div class="control">
+                {{ form.submit(
+                    class="button is-link is-fullwidth",
+                    type="submit"
+                   )
+                }}
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+<!--
 <form class="basic-form mt-2" method="POST" enctype="multipart/form-data">
   {{ form.csrf_token }}
 
@@ -29,15 +71,15 @@
   {% endif %}
 
 </form>
-
+!-->
 
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-  $(".custom-file-input").on("change", function() {
+  $(".file-input").on("change", function() {
       var fileName = $(this).val().split("\\").pop();
-      $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+      $(this).siblings(".file-name").html(fileName);
   });
 </script>
 {% endblock %}
