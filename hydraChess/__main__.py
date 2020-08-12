@@ -310,13 +310,24 @@ def settings():
         raw_img = BytesIO(form.image.data.read())
 
         img = Image.open(raw_img)
-        new_size = min(300, img.width), min(300, img.height)
-        img = img.resize(new_size).convert('RGB')
+        img_new_side = min(img.width // 256, img.height // 256) * 256
+
+        crop_left = (img.width - img_new_side) // 2
+        crop_upper = (img.height - img_new_side) // 2
+        crop_box = (
+            crop_left,
+            crop_upper,
+            crop_left + img_new_side,
+            crop_upper + img_new_side
+        )
+        img = img.crop(box=crop_box)
+        img.thumbnail((256, 256), Image.ANTIALIAS)
 
         img_hash = uuid.uuid4().hex
         path = os.path.dirname(os.path.realpath(__file__)) +\
             url_for('static', filename=f'img/profiles/{img_hash}.jpg')
-        img.save(path)
+
+        img.convert('RGB').save(path)
 
         current_user.avatar_hash = img_hash
         current_user.save()

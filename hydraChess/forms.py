@@ -53,8 +53,8 @@ def image_content_validator(form, field):
     if imghdr.what(raw_img) is None:
         raise StopValidation(message=("Can't read image data"))
     img = Image.open(raw_img)
-    if img.width < 300 or img.height < 300:
-        raise StopValidation(message=("Image size must be at least 300x300"))
+    if img.width < 256 or img.height < 256:
+        raise StopValidation(message=("Image size must be at least 256x256"))
 
 
 class SignUpForm(FlaskForm):

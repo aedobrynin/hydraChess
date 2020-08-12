@@ -1,16 +1,34 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<head>
-  <link rel='stylesheet'
-        type='text/css'
-        href='{{ url_for('static', filename='css/user_profile.css') }}'>
-</head>
 <body>
+  <div class="container">
+    <div class="columns">
+      <div class="column">
+        <div class="box">
+          <div class="container">
+            <div class="columns">
+              <div class="column is-narrow">
+                <figure class="image is-256x256">
+                  <img src="{{ url_for('static', filename='img/profiles/' + avatar_hash + '.jpg') }}"></img>
+                </figure>
+              </div>
+              <div class="column">
+                <div class="is-pulled-left">
+                  <h1 class="title is-1">{{ nickname }}</h1>
+                  <h2 class="subtitle is-4">Rating: {{ rating }}</h2>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!--
   <div class="container pt-3 pb-3">
     <div class="d-flex flex-column flex-lg-row mx-auto">
       <div class="col-4">
-        <img class="profile_img" src="{{ url_for('static', filename='img/profiles/' + avatar_hash + '.jpg') }}"></img>
       </div>
       <div class="col-8 my-auto">
         <p class="nickname my-0">{{ nickname }}</p>
@@ -41,6 +59,7 @@
         </div>
     </div>
   </div>
+  !-->
 </body>
 
 {% endblock %}
