@@ -30,6 +30,7 @@ from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 from flask_restful import Api
+import sass
 from hydraChess.config import ProductionConfig
 from hydraChess.forms import SignUpForm, LoginForm, SettingsForm
 from hydraChess.models import User, Game
@@ -129,13 +130,13 @@ def sign_in():
             return redirect("/")
         return render_template(
                 'sign_in.html',
-                title="Sign in",
+                title="Log in - Hydra Chess",
                 message="Wrong login or password",
                 form=form
                )
     return render_template(
             'sign_in.html',
-            title="Sign in - Hydra CHess",
+            title="Log in - Hydra Chess",
             form=form
            )
 
@@ -343,6 +344,23 @@ def page_not_found(e):
 
 
 if __name__ == '__main__':
+    compiled_bulma =\
+        sass.compile(
+            filename=os.path.join(
+                app.root_path,
+                app.static_url_path[1:],
+                'sass/bulma.sass'
+            ),
+            output_style='compressed'
+        )
+
+
+    path_to_bulma_css =\
+        os.path.join(app.root_path, app.static_url_path[1:], 'css/bulma.css')
+
+    with open(path_to_bulma_css, "w") as bulma_css:
+        bulma_css.write(compiled_bulma)
+
     #  Set debug to False in production
     sio.run(
         app,
