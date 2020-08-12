@@ -53,7 +53,7 @@ def image_content_validator(form, field):
         raise StopValidation(message=("Can't read image data"))
 
 
-class RegisterForm(FlaskForm):
+class SignUpForm(FlaskForm):
     login = \
         StringField('Nickname',
                     validators=[validators.DataRequired(),

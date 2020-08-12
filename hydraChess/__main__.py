@@ -31,7 +31,7 @@ from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 from flask_restful import Api
 from hydraChess.config import ProductionConfig
-from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
+from hydraChess.forms import SignUpForm, LoginForm, SettingsForm
 from hydraChess.models import User, Game
 from hydraChess.resources import GamesPlayed, GamesList, GameResource
 
@@ -93,14 +93,14 @@ def game_page(game_id: int):
     if game.is_finished:
         return render_template('game_static.html')
 
-    return render_template('game.html', title='Game - Hydra chess')
+    return render_template('game.html', title='Game - Hydra Chess')
 
 
 @app.route('/sign_up', methods=['GET', 'POST'])
 def sign_up():
     if current_user.is_authenticated:
         return redirect('/')
-    form = RegisterForm()
+    form = SignUpForm()
     if form.validate_on_submit():
         user = User(login=form.login.data)
         user.set_password(form.password.data)
@@ -109,7 +109,11 @@ def sign_up():
         login_user(user)
         return redirect('/')
 
-    return render_template('register.html', title='Register', form=form)
+    return render_template(
+            'sign_up.html',
+            title='Sign up - Hydra Chess',
+            form=form
+           )
 
 
 @app.route('/sign_in', methods=['GET', 'POST'])
@@ -123,11 +127,17 @@ def sign_in():
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
             return redirect("/")
-        return render_template('sign_in.html',
-                               title="Sign in",
-                               message="Wrong login or password",
-                               form=form)
-    return render_template('sign_in.html', title="Sign in", form=form)
+        return render_template(
+                'sign_in.html',
+                title="Sign in",
+                message="Wrong login or password",
+                form=form
+               )
+    return render_template(
+            'sign_in.html',
+            title="Sign in - Hydra CHess",
+            form=form
+           )
 
 
 @app.route('/user/<nickname>', methods=['GET'])
