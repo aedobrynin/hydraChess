@@ -247,18 +247,18 @@
   function pushToMovesList(move, indx) {
     $movesList.find('.halfmove').removeClass('halfmove-active')
     if (indx % 2 === 0) {
-      $movesList.append(`<div class='row move'>
+      $movesList.append(`<div class='move columns is-vcentered'>
                           <div id='move_${indx}'
-                               class='col halfmove halfmove-active'>
-                            ${move}
+                              class='column halfmove halfmove-active'>${move}
                           </div>
-                          <div class='col'></div>
+                          <div class='column halfmove is-invisible'></div>
                          </div>`)
     } else {
       var $moveCell = $movesList.children().last().children().last()
       $moveCell.attr('id', `move_${indx}`)
+      $moveCell.removeClass('is-invisible')
       $moveCell.addClass('halfmove halfmove-active')
-      $moveCell.append(move)
+      $moveCell.html(move)
     }
     $movesList.scrollTop($movesList[0].scrollHeight)
   }

@@ -92,7 +92,10 @@ def game_page(game_id: int):
         return render_template('404.html'), 404
 
     if game.is_finished:
-        return render_template('game_static.html')
+        return render_template(
+                'game_static.html',
+                title='Game - Hydra Chess'
+        )
 
     return render_template('game.html', title='Game - Hydra Chess')
 

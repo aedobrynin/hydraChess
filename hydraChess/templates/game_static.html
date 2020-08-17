@@ -10,14 +10,19 @@
         type='text/css'
         href='{{ url_for('static', filename='css/game.css') }}'>
 </head>
-<body class='d-flex flex-row justify-content-center align-items-center'>
-  <div id='board' class='fluid-container'></div>
-  <div id='right_container' class='rounded ml-2'>
-    <div id='info_a' class='player-info'></div>
-    <div id='moves_list' class='container'></div>
-    <div id='info_b' class='player-info'></div>
-  </div>
 <body>
+  <div class='container has-text-centered'>
+    <div class='columns mt-1 is-vcentered'>
+      <div id='board' class='column'></div>
+      <div id='right_container' class='column'>
+        <div id='info_a' class='player-info'></div>
+        <div id='moves_list'>
+        </div>
+        <div id='info_b' class='player-info'></div>
+      </div>
+    </div>
+  </div>
+</body>
 {% endblock %}
 
 {% block extra_scripts %}

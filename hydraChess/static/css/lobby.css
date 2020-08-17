@@ -1,14 +1,4 @@
-#find_game_form {
-  width: 200px;
-  height: 115px;
-  background-color: #343a40;
-}
-
-#find_game_btn {
-  width: 100%;
-}
-
-#stop_search_btn {
-  width: 100%;
-  display: none;
+.time-button {
+  width: 300px !important;
+  height: 100px !important;
 }
