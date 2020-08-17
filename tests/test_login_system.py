@@ -55,7 +55,7 @@ class TestRegister(unittest.TestCase):
         sleep(3)
 
     def setUp(self):
-        self.url = app.config['HOST'] + 'register'
+        self.url = app.config['HOST'] + 'sign_up'
         self.user_data = {
             'login': uuid4().hex[:15],
             'password': 'testtesttest',
@@ -75,7 +75,7 @@ class TestRegister(unittest.TestCase):
             data['login'] = data['login'][:login_len]
             resp = requests.post(self.url, data=data)
             self.assertIn(
-                "Login can't be shorter than 3 characters",
+                "Nickname can't be shorter than 3 characters",
                 unescape(resp.text)
             )
 
@@ -85,7 +85,7 @@ class TestRegister(unittest.TestCase):
             data['login'] = 'a' * i
             resp = requests.post(self.url, data=data)
             self.assertIn(
-                "Login can't be longer than 20 characters",
+                "Nickname can't be longer than 20 characters",
                 unescape(resp.text)
             )
 
@@ -153,7 +153,7 @@ class TestRegister(unittest.TestCase):
         self.assertIn("lobby", resp.url)
         resp = requests.post(self.url, data=data)
         self.assertIn(
-            "Login already taken",
+            "Nickname already taken",
             unescape(resp.text)
         )
 
@@ -196,7 +196,7 @@ class TestLogin(unittest.TestCase):
         data = self.user_data.copy()
         data['submit'] = 'Register'
         data['confirm_password'] = data['password']
-        resp = requests.post(app.config['HOST'] + 'register', data=data)
+        resp = requests.post(app.config['HOST'] + 'sign_up', data=data)
         self.assertIn('lobby', resp.url)
 
     def test_bad_login(self):

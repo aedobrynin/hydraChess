@@ -63,6 +63,7 @@ class GamesList(Resource):
                 'black_player': game.black_user.login,
                 'id': game.id,
                 'result': game.result,
+                'moves_cnt': game.get_moves_cnt(),
             }
             games.append(cur_game)
 

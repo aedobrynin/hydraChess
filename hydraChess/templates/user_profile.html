@@ -27,37 +27,14 @@
 					<nav class="pagination" role="navigation" aria-label="pagination">
 						<ul class="pagination-list"></ul>
 					</nav>
+          <table class="table is-fullwidth is-hoverable">
+            <tbody id='games_container'>
+            </tbody>
+          </table>
 				</div>
       </div>
     </div>
   </div>
-  <!--
-  <div class="container pt-3 pb-3">
-    <div class="d-flex flex-column">
-      <div id='games_history' style="display: none">
-        <h1 class='text-light'>Latest games</h1>
-        <div id='select_buttons_container'>
-          <button id='first_page_select'>First</button>
-          <button id='prev_page_select'><</button>
-          <span id='cur_page_container' class='text-light font-weight-bold'></span>
-          <button id='next_page_select'>></button>
-          <button id='last_page_select'>Last</button>
-        </div>
-        <table class='table table-light'>
-          <thead>
-            <tr>
-              <th scope='col'>White player</th>
-              <th scope='col'>Black player</th>
-              <th scope='col'>Result</th>
-            </tr>
-          </thead>
-          <tbody id='games_container'>
-          </tbody>
-        </table>
-        </div>
-    </div>
-  </div>
-  !-->
 </body>
 
 {% endblock %}
@@ -72,6 +49,7 @@
   var curPage = 1
 
 	$paginationList = $('.pagination-list')
+  $gamesContainer = $('#games_container')
 
   function initGamesHistory(data) {
     gamesPlayed = data['games_played']
@@ -152,9 +130,11 @@
     data['games'].forEach(function(item) {
       $gamesContainer.
         append(`<tr data-href='/game/${item.id}' style="cursor: pointer">
-                <td><a href='/user/${item.white_player}'>${item.white_player}</a></td>
-                <td><a href='/user/${item.black_player}'>${item.black_player}</a></td>
-                <td>${item.result}</td>
+                <td width=10%><a href='/user/${item.white_player}'>${item.white_player}</a></td>
+                <td width=3%>VS</td>
+                <td width=10%><a href='/user/${item.black_player}'>${item.black_player}</a></td>
+                <td width=10%>${item.result}</td>
+                <td>${item.moves_cnt} ${item.moves_cnt == 1 ? 'move' : 'moves'}</td>
               </tr>`
         )
     })
