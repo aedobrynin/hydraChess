@@ -321,6 +321,10 @@
   }
 
   function onFirstMoveWaiting(data) {
+    if ($oppDisconnectedNotification.hasClass('is-hidden') === false) {
+      return
+    }
+
     var waitTime = data.wait_time
 
     firstMoveTimer.stop()
@@ -372,20 +376,6 @@
     $drawBtn.removeClass('is-warning')
     $drawBtn.removeClass('has-text-weight-bold')
     $drawBtn.text('Draw')
-  }
-
-  function checkOrientation() {
-    var viewportWidth = window.innerWidth
-    var viewportHeight = window.innerHeight
-
-    // Ignore quite large devices
-    if (Math.min(viewportWidth, viewportHeight) >= 550) {
-      return
-    }
-
-    if (viewportHeight > viewportWidth) {
-      alert('Please, use the landscape mode') // TODO: something beautiful
-    }
   }
 
   function updateBoardSize() {
@@ -450,9 +440,6 @@
       $('#search_game_time').val(localStorage.lastGameTimeValue)
     }
   })
-
-  $(window).on('load', checkOrientation)
-  $(window).resize(checkOrientation)
 
   $(window).on('load', updateBoardSize)
   $(window).resize(updateBoardSize)

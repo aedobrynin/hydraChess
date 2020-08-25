@@ -187,9 +187,6 @@ def on_cancel_search(*args, **kwargs):
 @sio.on('resign')
 @authenticated_only
 def on_resign(*args, **kwargs) -> None:
-    if current_user.cur_game_id is None:
-        return
-
     game_management.resign.delay(current_user.id, current_user.cur_game_id)
 
 
@@ -237,10 +234,6 @@ def on_connect(*args, **kwargs) -> None:
     if game is None:  # There is no game with current id
         disconnect()
 
-    # If the game is finished, just use template with AJAX request
-    # Else if the user is player, reconnect him to the game
-    # Else connect the user to the spectators room
-
     if game.is_finished:
         game_management.send_game_info.delay(game_id, request.sid, False)
         return
@@ -257,17 +250,15 @@ def on_connect(*args, **kwargs) -> None:
 @sio.on('make_draw_offer')
 @authenticated_only
 def on_make_draw_offer(*args, **kwargs) -> None:
-    if current_user.cur_game_id:
-        game_management.make_draw_offer.delay(current_user.id,
-                                              current_user.cur_game_id)
+    game_management.make_draw_offer.delay(current_user.id,
+                                          current_user.cur_game_id)
 
 
 @sio.on('accept_draw_offer')
 @authenticated_only
 def on_accept_draw_offer(*args, **kwargs) -> None:
-    if current_user.cur_game_id:
-        game_management.accept_draw_offer.delay(current_user.id,
-                                                current_user.cur_game_id)
+    game_management.accept_draw_offer.delay(current_user.id,
+                                            current_user.cur_game_id)
 
 
 @sio.on('disconnect')
@@ -276,7 +267,8 @@ def on_disconnect(*args, **kwargs) -> None:
     if current_user.cur_game_id:
         game_management.on_disconnect.delay(current_user.id,
                                             current_user.cur_game_id)
-    game_management.cancel_search.delay(current_user.id)
+    else:
+        game_management.cancel_search.delay(current_user.id)
 
 
 @sio.on('make_move')
@@ -286,10 +278,9 @@ def on_make_move(*args, **kwargs):
         user_id = current_user.id
         san = args[0].get('san')
         game_id = args[0].get('game_id')
-        try:
-            game_id = int(game_id)
-        except (TypeError, ValueError):
+        if not game_id.isdigit():
             return
+        game_id = int(game_id)
         if san and game_id:
             game_management.make_move.delay(user_id, game_id, san)
 

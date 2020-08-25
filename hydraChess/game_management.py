@@ -111,7 +111,8 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
 
     game = Game.get(game_id)
 
-    if game.is_finished or\
+    if not game or\
+            game.is_finished or\
             user_id not in (game.white_user.id, game.black_user.id):
         return
 
@@ -193,9 +194,6 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
                 'white_clock': int(game.white_clock.total_seconds())}
 
         sio.emit('game_updated', data, room=game_id)
-        # DO NOT REMOVE NEXT STRING. SIO CAN'T EMIT TO SPECTATORS WITHOUT
-        # THIS :/
-        data = data
         sio.emit('game_updated', data, room=game.black_user.sid)
         sio.emit('game_updated', data, room=game.white_user.sid)
 
@@ -218,6 +216,10 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
 def resign(user_id: int, game_id: int) -> None:
     """Ends the game due to one player's resignation"""
     game = Game.get(game_id)
+
+    if game.is_finished or\
+            user_id not in (game.black_user.id, game.white_user.id):
+        return
 
     # If there is no moves in the game, just cancel it.
     if game.get_moves_cnt() < 2:
@@ -322,6 +324,11 @@ def on_disconnect(user_id: int, game_id: int) -> None:
 
     game = Game.get(game_id)
 
+    if not game or\
+            game.is_finished or\
+            user_id not in (game.white_user.id, game.black_user.id):
+        return
+
     if game.draw_offer_sender:
         #  We aren't checking user_id != draw_offer_sender
         #  It'll be checked in decline_draw_offer func
@@ -382,6 +389,10 @@ def accept_draw_offer(user_id: int, game_id: int):
     '''Accepts draw offer, if it exists'''
     game = Game.get(game_id)
 
+    if game.is_finished or\
+            user_id not in (game.white_user.id, game.black_user.id):
+        return
+
     with rom.util.EntityLock(game, 10, 10):
         if game.draw_offer_sender and game.draw_offer_sender != user_id:
             # opp_sid = User.get(game.draw_offer_sender).sid
@@ -395,6 +406,10 @@ def accept_draw_offer(user_id: int, game_id: int):
 def decline_draw_offer(user_id: int, game_id: int):
     '''Declines draw offer, if it exists'''
     game = Game.get(game_id)
+
+    if game.is_finished or\
+            user_id not in (game.white_user.id, game.black_user.id):
+        return
 
     with rom.util.EntityLock(game, 10, 10):
         if game.draw_offer_sender and game.draw_offer_sender != user_id:
