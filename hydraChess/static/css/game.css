@@ -1,30 +1,16 @@
-/* -- CHAT CSS -- */
+.animate__animated.animate__fadeIn {
+  --animate-duration: 0.1s;
+}
+
+.animate__animated.animate__fadeOut {
+  --animate-duration: 0.1s;
+}
+
 
 #search_game_btn {
   background-color: #b58863;
   color: white;
   font-weight: bold;
-}
-
-#stop_search_btn {
-  display: none;
-}
-
-#buttons_container {
-  display: none;
-  position: absolute;
-  background-color: white;
-}
-
-.game-btn {
-  height: 20px;
-  width: 70px;
-  line-height: 15px;
-}
-
-.game-btn:focus {
-  outline: none !important;
-  box-shadow: none !important;
 }
 
 .notification {
@@ -33,7 +19,7 @@
   right: 2%;
 }
 
-/* -- BOARD CSS -- */
+
 .highlight-from, .highlight-to {
   box-shadow: inset 0 0 4px 4px #ed9e3d;
 }
@@ -46,6 +32,7 @@
   box-shadow: inset 0 0 4px 4px #cc1b00;
 }
 
+
 .clock {
   font-family: Tahoma, Geneva, sans-serif;
   color: white;
@@ -54,23 +41,14 @@
   text-align: center;
   line-height: 60px;
   height: 60px;
-  background-color: #4F473D;
+  background-color: #4B4549;
   margin-right: 0px;
   padding-right: 0px;
 }
 
 
-#moves_list {
-  width: 300px;
-  height: 75px;
-  background-color: #F5F5F5;
-  overflow-y: hidden;
-  margin-top: 1px;
-  margin-bottom: 1px;
-}
-
 .player-info {
-  background-color: #F5F5F5;
+  background-color: #E9E9E9;
   width: 300px;
   height: 30px;
   padding-left: 5px;
@@ -85,18 +63,36 @@
   color: black;
 }
 
-.move {
-  height: 25px;
+
+#buttons_container {
+  background-color: #E9E9E9;
+  margin-bottom: 1px;
 }
 
-.halfmove {
+.result-btn {
   height: 25px;
+  width: 150px;
+}
+
+
+#moves_list {
+  width: 300px;
+  height: 75px;
+  background-color: #E9E9E9;
+  overflow-y: hidden;
+  margin-top: 1px;
+  margin-bottom: 1px;
+}
+
+.move {
+  height: 25px !important;
+}
+
+.halfmove:hover {
+  cursor: pointer;
+  background-color: #7C8590;
 }
 
 .halfmove-active {
   background-color: lightsteelblue !important;
-}
-
-.halfmove:hover {
-  background-color: #7C8590;
 }

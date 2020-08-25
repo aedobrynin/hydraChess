@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set error_shown = False %}
+<body>
+  <div class="container">
+    <div class="columns is-centered pt-1">
+      <div class="column is-one-third">
+        <div class="box">
+          <h1 class="title">Sign up</h1>
+          <form action="" method="post">
+            {{ form.csrf_token }}
+            <div class="field">
+              <label class="label">{{ form.login.label }}</label>
+              <div class="control">
+                {{ form.login(
+                    class="input",
+                    placeholder="Your nickname here"
+                   )
+                }}
+              </div>
+              {% if form.login.errors and not error_shown %}
+                <p class="help is-danger">{{ form.login.errors[0] }}</p>
+                {% set error_shown = True %}
+              {% endif %}
+            </div>
+            <div class="field">
+              <label class="label">{{ form.password.label }}</label>
+              <div class="control">
+                {{ form.password(
+                    class="input",
+                    type="password",
+                    placeholder="Your password here"
+                   )
+                }}
+                {% if form.password.errors and not error_shown %}
+                  <p class="help is-danger">{{ form.password.errors[0] }}</p>
+                  {% set error_shown = True %}
+                {% endif %}
+              </div>
+            </div>
+            <div class="field">
+              <label class="label"> {{ form.confirm_password.label }}</label>
+              <div class="control">
+                {{ form.confirm_password(
+                    class="input",
+                    type="password",
+                    placeholder="Repeat the password"
+                   )
+                }}
+                {% if form.confirm_password.errors and not error_shown %}
+                  <p class="help is-danger">{{ form.confirm_password.errors[0] }}</p>
+                  {% set error_shown = True %}
+                {% endif %}
+              </div>
+            </div>
+            <div class="field">
+              <div class="control">
+                {{ form.submit(
+                    class="button is-link is-fullwidth",
+                    type="submit"
+                   )
+                }}
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+{% endblock %}
+

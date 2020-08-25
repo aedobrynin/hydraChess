@@ -65,7 +65,7 @@ class TestGamesApi(unittest.TestCase):
         self.session = requests.Session()
 
         resp = self.session.post(
-            app.config['HOST'] + 'register',
+            app.config['HOST'] + 'sign_up',
             data=self.user_data,
         )
         self.session.close()
@@ -260,7 +260,8 @@ class TestGamesApi(unittest.TestCase):
                         'white_player': game.white_user.login,
                         'black_player': game.black_user.login,
                         'result': game.result,
-                        'id': game.id
+                        'id': game.id,
+                        'moves_cnt': game.get_moves_cnt()
                     }
                     response_data = json["games"][i - start_from_val]
 

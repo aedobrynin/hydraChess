@@ -68,7 +68,6 @@ def send_game_info(game_id: int, room_id: int, is_player: bool):
                 data["can_send_draw_offer"] = True
             else:
                 data["can_send_draw_offer"] = False
-            data['rating_changes'] = rating_changes[data['color']].to_dict()
     else:
         data["result"] = game.result
 
@@ -102,11 +101,6 @@ def start_game(game_id: int) -> None:
         room=game.white_user.sid,
     )
 
-    game.white_user.append_game_id(game_id)
-    game.black_user.append_game_id(game_id)
-    game.white_user.save()
-    game.black_user.save()
-
 
 @celery.task(name='make_move', ignore_result=True)
 def make_move(user_id: int, game_id: int, move_san: str) -> None:
@@ -117,7 +111,8 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
 
     game = Game.get(game_id)
 
-    if game.is_finished or\
+    if not game or\
+            game.is_finished or\
             user_id not in (game.white_user.id, game.black_user.id):
         return
 
@@ -199,9 +194,6 @@ def make_move(user_id: int, game_id: int, move_san: str) -> None:
                 'white_clock': int(game.white_clock.total_seconds())}
 
         sio.emit('game_updated', data, room=game_id)
-        # DO NOT REMOVE NEXT STRING. SIO CAN'T EMIT TO SPECTATORS WITHOUT
-        # THIS :/
-        data = data
         sio.emit('game_updated', data, room=game.black_user.sid)
         sio.emit('game_updated', data, room=game.white_user.sid)
 
@@ -225,8 +217,12 @@ def resign(user_id: int, game_id: int) -> None:
     """Ends the game due to one player's resignation"""
     game = Game.get(game_id)
 
+    if game.is_finished or\
+            user_id not in (game.black_user.id, game.white_user.id):
+        return
+
     # If there is no moves in the game, just cancel it.
-    if not game.raw_moves:
+    if game.get_moves_cnt() < 2:
         end_game.delay(game_id, '-', 'Game canceled.', update_stats=False)
         return
 
@@ -328,6 +324,11 @@ def on_disconnect(user_id: int, game_id: int) -> None:
 
     game = Game.get(game_id)
 
+    if not game or\
+            game.is_finished or\
+            user_id not in (game.white_user.id, game.black_user.id):
+        return
+
     if game.draw_offer_sender:
         #  We aren't checking user_id != draw_offer_sender
         #  It'll be checked in decline_draw_offer func
@@ -388,6 +389,10 @@ def accept_draw_offer(user_id: int, game_id: int):
     '''Accepts draw offer, if it exists'''
     game = Game.get(game_id)
 
+    if game.is_finished or\
+            user_id not in (game.white_user.id, game.black_user.id):
+        return
+
     with rom.util.EntityLock(game, 10, 10):
         if game.draw_offer_sender and game.draw_offer_sender != user_id:
             # opp_sid = User.get(game.draw_offer_sender).sid
@@ -401,6 +406,10 @@ def accept_draw_offer(user_id: int, game_id: int):
 def decline_draw_offer(user_id: int, game_id: int):
     '''Declines draw offer, if it exists'''
     game = Game.get(game_id)
+
+    if game.is_finished or\
+            user_id not in (game.white_user.id, game.black_user.id):
+        return
 
     with rom.util.EntityLock(game, 10, 10):
         if game.draw_offer_sender and game.draw_offer_sender != user_id:
@@ -442,10 +451,6 @@ def end_game(game_id: int,
     data = {'result': result}
     sio.emit('game_ended', data, room=game_id)  # Emit to spectators
 
-    data['reason'] = reason
-    sio.emit('game_ended', data, room=game.white_user.sid)
-    sio.emit('game_ended', data, room=game.black_user.sid)
-
     with rom.util.EntityLock(game, 10, 10):
         game.is_finished = 1
         game.result = result
@@ -459,28 +464,49 @@ def end_game(game_id: int,
 
         game.save()
 
-    if update_stats is False:
-        return
+    if update_stats:
+        rating_changes = get_rating_changes(game_id)
 
-    rating_changes = get_rating_changes(game_id)
+        with rom.util.EntityLock(game.white_user, 10, 10):
+            game.white_user.games_played += 1
+            game.white_user.append_game_id(game_id)
+            game.white_user.save()
 
-    with rom.util.EntityLock(game.white_user, 10, 10):
-        game.white_user.games_played += 1
-        game.white_user.save()
+        with rom.util.EntityLock(game.black_user, 10, 10):
+            game.black_user.games_played += 1
+            game.black_user.append_game_id(game_id)
+            game.black_user.save()
 
-    with rom.util.EntityLock(game.black_user, 10, 10):
-        game.black_user.games_played += 1
-        game.black_user.save()
+        if result == "1-0":
+            update_rating.delay(game.white_user.id, rating_changes["w"].win)
+            update_rating.delay(game.black_user.id, rating_changes["b"].lose)
+            data['rating_deltas'] = {
+                'w': rating_changes['w'].win,
+                'b': rating_changes['b'].lose
+            }
+        elif result == "1/2-1/2":
+            update_rating.delay(game.white_user.id, rating_changes["w"].draw)
+            update_rating.delay(game.black_user.id, rating_changes["b"].draw)
+            data['rating_deltas'] = {
+                'w': rating_changes['w'].draw,
+                'b': rating_changes['b'].draw
+            }
+        elif result == "0-1":
+            update_rating.delay(game.white_user.id, rating_changes["w"].lose)
+            update_rating.delay(game.black_user.id, rating_changes["b"].win)
+            data['rating_deltas'] = {
+                'w': rating_changes['w'].lose,
+                'b': rating_changes['b'].win
+            }
+    else:
+        data['rating_deltas'] = {
+            'w': 0,
+            'b': 0
+        }
 
-    if result == "1-0":
-        update_rating.delay(game.white_user.id, rating_changes["w"].win)
-        update_rating.delay(game.black_user.id, rating_changes["b"].lose)
-    elif result == "1/2-1/2":
-        update_rating.delay(game.white_user.id, rating_changes["w"].draw)
-        update_rating.delay(game.black_user.id, rating_changes["b"].draw)
-    elif result == "0-1":
-        update_rating.delay(game.white_user.id, rating_changes["w"].lose)
-        update_rating.delay(game.black_user.id, rating_changes["b"].win)
+    data['reason'] = reason
+    sio.emit('game_ended', data, room=game.white_user.sid)
+    sio.emit('game_ended', data, room=game.black_user.sid)
 
     update_k_factor.delay(game.white_user.id)
     update_k_factor.delay(game.black_user.id)
@@ -631,10 +657,19 @@ def update_rating(user_id: int, rating_delta: int) -> None:
 
 
 @celery.task(name="search_game", ignore_result=True)
-def search_game(user_id: int, seconds: int) -> None:
+def search_game(user_id: int, minutes: int) -> None:
     '''If there is appropriate game request, it starts a new game.
        Else it makes the game request and adds it to the database.'''
     user = User.get(user_id)
+
+    if user.cur_game_id or user.in_search:
+        return
+
+    if minutes not in (1, 2, 3, 5, 10, 15, 20, 30, 60):
+        return
+
+    seconds = minutes * 60
+
     with rom.util.EntityLock(user, 10, 10):
         game_requests = \
                 rom.query.Query(GameRequest).filter(time=seconds).all()

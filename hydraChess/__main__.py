@@ -30,8 +30,9 @@ from flask_socketio import SocketIO, disconnect, join_room
 from flask_login import LoginManager, login_user, logout_user
 from flask_login import current_user, login_required
 from flask_restful import Api
+import sass
 from hydraChess.config import ProductionConfig
-from hydraChess.forms import RegisterForm, LoginForm, SettingsForm
+from hydraChess.forms import SignUpForm, LoginForm, SettingsForm
 from hydraChess.models import User, Game
 from hydraChess.resources import GamesPlayed, GamesList, GameResource
 
@@ -89,18 +90,14 @@ def game_page(game_id: int):
     game = Game.get(game_id)
     if not game:
         return render_template('404.html'), 404
+    return render_template('game.html', title='Game - Hydra Chess')
 
-    if game.is_finished:
-        return render_template('game_static.html')
-
-    return render_template('game.html', title='Game - Hydra chess')
-
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
+  
+@app.route('/sign_up', methods=['GET', 'POST'])
+def sign_up():
     if current_user.is_authenticated:
         return redirect('/')
-    form = RegisterForm()
+    form = SignUpForm()
     if form.validate_on_submit():
         user = User(login=form.login.data)
         user.set_password(form.password.data)
@@ -109,7 +106,11 @@ def register():
         login_user(user)
         return redirect('/')
 
-    return render_template('register.html', title='Register', form=form)
+    return render_template(
+        'sign_up.html',
+        title='Sign up - Hydra Chess',
+        form=form
+    )
 
 
 @app.route('/sign_in', methods=['GET', 'POST'])
@@ -123,11 +124,17 @@ def sign_in():
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
             return redirect("/")
-        return render_template('sign_in.html',
-                               title="Sign in",
-                               message="Wrong login or password",
-                               form=form)
-    return render_template('sign_in.html', title="Sign in", form=form)
+        return render_template(
+            'sign_in.html',
+            title="Log in - Hydra Chess",
+            message="Wrong login or password",
+            form=form
+        )
+    return render_template(
+        'sign_in.html',
+        title="Log in - Hydra Chess",
+        form=form
+    )
 
 
 @app.route('/user/<nickname>', methods=['GET'])
@@ -145,10 +152,6 @@ def user_profile(nickname: str):
 @sio.on('search_game')
 @authenticated_only
 def on_search_game(*args, **kwargs):
-    if any([current_user.cur_game_id, current_user.in_search]):
-        print("Already in search/in game")
-        return
-
     if not(args and isinstance(args[0], dict)):
         print("Bad arguments")
         return
@@ -157,18 +160,18 @@ def on_search_game(*args, **kwargs):
     # If valid game_id provided, create game request with the same game time as
     # the game.
     minutes = args[0].get('minutes', None)
-    if isinstance(minutes, int) is False or\
-            minutes not in (1, 2, 3, 5, 10, 20, 30, 60):
-        try:
-            game_id = args[0].get('game_id', None)
-            game = Game.get(game_id)
-            if not game:
-                return
-            minutes = game.total_clock.total_seconds() // 60
-        except (ValueError, TypeError):
+    if minutes is None:
+        game_id = args[0].get('game_id', None)
+        if not game_id:
             return
+        game = Game.get(game_id)
+        if not game:
+            return
+        minutes = game.total_clock.total_seconds() // 60
+    elif type(minutes) != int:
+        return
 
-    game_management.search_game.delay(current_user.id, minutes * 60)
+    game_management.search_game.delay(current_user.id, minutes)
 
 
 @sio.on('cancel_search')
@@ -180,9 +183,6 @@ def on_cancel_search(*args, **kwargs):
 @sio.on('resign')
 @authenticated_only
 def on_resign(*args, **kwargs) -> None:
-    if current_user.cur_game_id is None:
-        return
-
     game_management.resign.delay(current_user.id, current_user.cur_game_id)
 
 
@@ -205,20 +205,24 @@ def on_send_message(*args, **kwargs) -> None:
 
 @sio.on('connect')
 def on_connect(*args, **kwargs) -> None:
-    game_id = request.args.get('game_id')
-
-    if not game_id:  # We are in lobby
-        if current_user.is_authenticated:
-            cur_user = User.get(current_user.id)
-            with EntityLock(cur_user, 10, 10):
-                cur_user.sid = request.sid
-                cur_user.save()
-        else:
-            disconnect()
+    request_type = request.args.get('request_type')
+    if not request_type:
+        disconnect()
         return
 
-    if not game_id.isdigit():  # Bad game id value
+    if current_user.is_authenticated:
+        cur_user = User.get(current_user.id)
+        with EntityLock(cur_user, 10, 10):
+            cur_user.sid = request.sid
+            cur_user.save()
+
+    if request_type == 'lobby' or request_type != 'game':
+        return
+
+    game_id = request.args.get('game_id')
+    if not game_id or not game_id.isdigit():
         disconnect()
+        return
 
     game_id = int(game_id)
     game = Game.get(game_id)
@@ -226,42 +230,31 @@ def on_connect(*args, **kwargs) -> None:
     if game is None:  # There is no game with current id
         disconnect()
 
-    # If the game is finished, just use template with AJAX request
-    # Else if the user is player, reconnect him to the game
-    # Else connect the user to the spectators room
-
     if game.is_finished:
-        disconnect()
-        #  Render template
-    else:
-        if current_user.is_authenticated:
-            cur_user = User.get(current_user.id)
-            with EntityLock(cur_user, 10, 10):
-                cur_user.sid = request.sid
-                cur_user.save()
-
-            if current_user.id in (game.white_user.id, game.black_user.id):
-                game_management.reconnect.delay(current_user.id, game_id)
-                return
-
         game_management.send_game_info.delay(game_id, request.sid, False)
-        join_room(game_id)
+        return
+
+    if current_user.is_authenticated:
+        if current_user.id in (game.white_user.id, game.black_user.id):
+            game_management.reconnect.delay(current_user.id, game_id)
+            return
+
+    game_management.send_game_info.delay(game_id, request.sid, False)
+    join_room(game_id)
 
 
 @sio.on('make_draw_offer')
 @authenticated_only
 def on_make_draw_offer(*args, **kwargs) -> None:
-    if current_user.cur_game_id:
-        game_management.make_draw_offer.delay(current_user.id,
-                                              current_user.cur_game_id)
+    game_management.make_draw_offer.delay(current_user.id,
+                                          current_user.cur_game_id)
 
 
 @sio.on('accept_draw_offer')
 @authenticated_only
 def on_accept_draw_offer(*args, **kwargs) -> None:
-    if current_user.cur_game_id:
-        game_management.accept_draw_offer.delay(current_user.id,
-                                                current_user.cur_game_id)
+    game_management.accept_draw_offer.delay(current_user.id,
+                                            current_user.cur_game_id)
 
 
 @sio.on('disconnect')
@@ -270,7 +263,8 @@ def on_disconnect(*args, **kwargs) -> None:
     if current_user.cur_game_id:
         game_management.on_disconnect.delay(current_user.id,
                                             current_user.cur_game_id)
-    game_management.cancel_search.delay(current_user.id)
+    else:
+        game_management.cancel_search.delay(current_user.id)
 
 
 @sio.on('make_move')
@@ -280,10 +274,9 @@ def on_make_move(*args, **kwargs):
         user_id = current_user.id
         san = args[0].get('san')
         game_id = args[0].get('game_id')
-        try:
-            game_id = int(game_id)
-        except (TypeError, ValueError):
+        if not game_id.isdigit():
             return
+        game_id = int(game_id)
         if san and game_id:
             game_management.make_move.delay(user_id, game_id, san)
 
@@ -299,13 +292,24 @@ def settings():
         raw_img = BytesIO(form.image.data.read())
 
         img = Image.open(raw_img)
-        new_size = min(300, img.width), min(300, img.height)
-        img = img.resize(new_size).convert('RGB')
+        img_new_side = min(img.width // 256, img.height // 256) * 256
+
+        crop_left = (img.width - img_new_side) // 2
+        crop_upper = (img.height - img_new_side) // 2
+        crop_box = (
+            crop_left,
+            crop_upper,
+            crop_left + img_new_side,
+            crop_upper + img_new_side
+        )
+        img = img.crop(box=crop_box)
+        img.thumbnail((256, 256), Image.ANTIALIAS)
 
         img_hash = uuid.uuid4().hex
         path = os.path.dirname(os.path.realpath(__file__)) +\
             url_for('static', filename=f'img/profiles/{img_hash}.jpg')
-        img.save(path)
+
+        img.convert('RGB').save(path)
 
         current_user.avatar_hash = img_hash
         current_user.save()
@@ -333,6 +337,22 @@ def page_not_found(e):
 
 
 if __name__ == '__main__':
+    compiled_bulma =\
+        sass.compile(
+            filename=os.path.join(
+                app.root_path,
+                app.static_url_path[1:],
+                'sass/bulma.sass'
+            ),
+            output_style='compressed'
+        )
+
+    path_to_bulma_css =\
+        os.path.join(app.root_path, app.static_url_path[1:], 'css/bulma.css')
+
+    with open(path_to_bulma_css, "w") as bulma_css:
+        bulma_css.write(compiled_bulma)
+
     #  Set debug to False in production
     sio.run(
         app,

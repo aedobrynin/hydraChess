@@ -1,27 +1,80 @@
 {% extends 'base.html' %}
 {% block content %}
 <head>
-  <link rel='stylesheet'
-        type='text/css'
-        href='{{ url_for('static', filename='css/lobby.css') }}'>
+    <link rel='stylesheet'
+          type='text/css'
+          href='{{ url_for('static', filename='css/lobby.css') }}'>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.0/animate.min.css" integrity="sha512-kb1CHTNhoLzinkElTgWn246D6pX22xj8jFNKsDmVwIQo+px7n1yjJUZraVuR/ou6Kmgea4vZXZeUDbqKtXkEMg==" crossorigin="anonymous" />
 </head>
 <body>
-  <div class='container'>
-    <div class='row align-items-center'>
-      <div class='col text-center'>
-        <form id='find_game_form' class='basic-form pt-2 pb-2 px-1 rounded mx-auto'>
-          <div id="minutes_info"></div>
-          <input id="slider_minutes" class="slider" type="range" min="0"
-                 value="0" max="7" step="1">
-          <button id='find_game_btn' class='btn btn-primary mt-2'>
-            Find game!
-          </button>
-          <button id='stop_search_btn' class='btn btn-secondary mt-2'>
-            Stop search
-          </button>
-        </form>
+  <div class="container mt-1 is-hidden-mobile">
+    <div class='columns is-centered'>
+      <div class='column is-narrow'>
+        <div class="box" style="width: 520px;">
+          <h1 class="title">Find new game</h1>
+          <div id='buttons_tablet' class='container has-text-centered'>
+            <div class="columns is-centered">
+              <div class="column is-narrow">
+                <button class="button time-button is-light"></button>
+                <button class="button time-button is-light"></button>
+                <button class="button time-button is-light"></button>
+              </div>
+            </div>
+            <div class="columns is-centered">
+              <div class="column is-narrow">
+                <button class="button time-button is-light"></button>
+                <button class="button time-button is-light"></button>
+                <button class="button time-button is-light"></button>
+              </div>
+            </div>
+            <div class="columns is-centered">
+              <div class="column is-narrow">
+                <button class="button time-button is-light"></button>
+                <button class="button time-button is-light"></button>
+                <button class="button time-button is-light"></button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+  </div>
+  <div class='container mt-1 is-hidden-tablet'>
+    <div class='box'>
+      <div class='container'>
+        <div class='field'>
+          <div class='control'>
+            <div class='select is-fullwidth'>
+              <select id='mobile_time_select'></select>
+            </div>
+          </div>
+        </div>
+        <div class='field'>
+          <div class='control is-fullwidth'>
+            <button id='start_searching'
+              class='button is-primary is-outlined is-fullwidth'>Start searching</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id='active_search_modal' class="modal">
+      <div class="modal-background"></div>
+      <div class="modal-content">
+        <div class='box mx-6'>
+          <h1 align=center class='title'>Searching for an opponent</h1>
+          <div class='columns is-mobile is-centered'>
+            <div class='column is-narrow'>
+              <div class="lds-roller"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+          </div>
+          <div class='columns is-mobile is-centered'>
+            <div class='column is-narrow'>
+              <button id='cancel_search_button' class='button'>Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
   </div>
 </body>
 {% endblock %}

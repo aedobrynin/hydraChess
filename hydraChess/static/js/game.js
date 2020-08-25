@@ -7,7 +7,6 @@
   var gameFinished = null
 
   var rating
-  var ratingChanges = null
 
   var $movesList = $('#moves_list')
   var movesArray = null
@@ -15,11 +14,16 @@
 
   var animation = false
 
-  var $firstMoveAlert = $('#first_move_alert')
+  var $modal = $('#game_results_modal')
+
+  var $firstMoveNotification = $('#first_move_notification')
   var firstMoveTimer = new Timer('first_move_seconds')
 
-  var $oppDisconnectedAlert = $('#opp_disconnected_alert')
+  var $oppDisconnectedNotification = $('#opp_disconnected_notification')
   var oppDisconnectedTimer = new Timer('reconnect_wait_seconds')
+
+  var $drawBtn = $('#draw_btn')
+  var $resignBtn = $('#resign_btn')
 
   var clockPair = new ClockPair(['clock_a', 'clock_b'], 0)
   clockPair.hide()
@@ -157,7 +161,8 @@
     // illegal move
     if (move === null) return 'snapback'
 
-    $firstMoveAlert.hide()
+    $firstMoveNotification.addClass('is-hidden')
+    $firstMoveNotification.removeClass('animate__animated animate__fadeIn')
     firstMoveTimer.stop()
 
     if (!game.game_over()) {
@@ -217,13 +222,12 @@
         rating = data['black_user']['rating']
         board.orientation('black')
       }
-      ratingChanges = data.rating_changes
 
       // Show draw and resign buttons.
       if (data.result === undefined) {
-        $('#buttons_container').css('display', 'block')
-        $('#draw_btn').prop('accept', false)
-        $('#draw_btn').prop('disabled', !data.can_send_draw_offer)
+        $('#buttons_container').removeClass('is-hidden')
+        $drawBtn.prop('accept', false)
+        $drawBtn.prop('disabled', !data.can_send_draw_offer)
       }
     }
 
@@ -237,8 +241,14 @@
       setResults(data.result)
     }
 
+    if (movesArray.length < 2) {
+      $resignBtn.html('Cancel game')
+    } else {
+      $resignBtn.html('Resign')
+    }
+
     // If game is started, start clocks
-    if (!(getFullmoveNumber() === 1 && game.turn() === 'w')) {
+    if (movesArray.length !== 0) {
       clockPair.start()
     }
 
@@ -263,12 +273,18 @@
     removeHighlights()
     highlightLastMove()
 
+    if (movesArray.length < 2) {
+      $resignBtn.text('Cancel game')
+    } else {
+      $resignBtn.text('Resign')
+    }
+
     // Checking in order to do not do this twice
     if (game.turn() === color && !game.game_over()) {
       moveSound.play()
     }
 
-    $('#draw_btn').prop('disabled', false)
+    $drawBtn.prop('disabled', false)
   }
 
   function onGameEnded(data) {
@@ -276,61 +292,50 @@
     $('#message_input').prop('readonly', true)
     */
 
-    $('#buttons_container').css('display', 'none')
+    $('#buttons_container').addClass('is-hidden')
 
     clockPair.stop()
     setResults(data.result)
 
     if (color === null) return // Do not do next things, If we are spectators.
-    $firstMoveAlert.hide()
+    $firstMoveNotification.addClass('is-hidden')
+    $firstMoveNotification.removeClass('animate__animated animate__fadeIn')
     firstMoveTimer.stop()
 
-    $oppDisconnectedAlert.hide()
+    $oppDisconnectedNotification.addClass('is-hidden')
+    $oppDisconnectedNotification.removeClass('animate__animated animate__fadeIn')
     oppDisconnectedTimer.stop()
 
-    // Calculate ratingDelta for modal
-    var ratingDelta = 0
-    if (data.result === '1/2-1/2') {
-      ratingDelta = ratingChanges['draw']
-    } else if (color === 'w') {
-      if (data.result === '1-0') {
-        ratingDelta = ratingChanges['win']
-      } else if (data.result === '0-1') {
-        ratingDelta = ratingChanges['lose']
-      }
-    } else {
-      if (data.result === '1-0')        {
-        ratingDelta = ratingChanges['lose']
-      } else if (data.result === '0-1') {
-        ratingDelta = ratingChanges['win']
-      }
-    }
-
+    var ratingDelta = data.rating_deltas[color]
     if (ratingDelta > 0) {
       ratingDelta = '+' + ratingDelta
     }
     rating += parseInt(ratingDelta)
 
-    $('#game_results_container')
+    $('#game_result_container')
       .append(`${data.reason}<br />Your new rating: ${rating} (${ratingDelta})`)
-    $('#game_results_modal').modal('show')
+    $modal.addClass('animate__animated animate__fadeIn is-active')
 
     gameEndedSound.play()
     gameFinished = true
   }
 
   function onFirstMoveWaiting(data) {
+    if ($oppDisconnectedNotification.hasClass('is-hidden') === false) {
+      return
+    }
+
     var waitTime = data.wait_time
 
     firstMoveTimer.stop()
     firstMoveTimer.setTime(waitTime)
     firstMoveTimer.start()
-    $firstMoveAlert.fadeIn()
+    $firstMoveNotification.toggleClass('animate__animated animate__fadeIn is-hidden')
   }
 
   function onOppDisconnected(data) {
-    // In order to do not make overlapping alerts.
-    if ($firstMoveAlert.css('display') !== 'none') {
+    // In order to do not make overlapping notifications.
+    if ($firstMoveNotification.hasClass('is-hidden') === false) {
       return
     }
 
@@ -339,17 +344,21 @@
     oppDisconnectedTimer.stop()
     oppDisconnectedTimer.setTime(waitTime)
     oppDisconnectedTimer.start()
-    $oppDisconnectedAlert.fadeIn()
+    $oppDisconnectedNotification.toggleClass('animate__animated animate__fadeIn is-hidden')
+    $oppDisconnectedNotification.fadeIn()
   }
 
   function onOppReconnected() {
-    $oppDisconnectedAlert.hide()
+    $oppDisconnectedNotification.addClass('is-hidden')
+    $oppDisconnectedNotification.removeClass('animate__animated animate__fadeIn')
     oppDisconnectedTimer.stop()
   }
 
   function onDrawOffer() {
-    $('#draw_btn').prop('accept', true)
-    $('#draw_btn').addClass('bg-warning')
+    $drawBtn.prop('accept', true)
+    $drawBtn.addClass('is-warning')
+    $drawBtn.addClass('has-text-weight-bold')
+    $drawBtn.text('Accept draw')
     drawOfferSound.play()
   }
 
@@ -359,26 +368,14 @@
 
   function makeDrawOffer() {
     sio.emit('make_draw_offer')
-    $('#draw_btn').prop('disabled', true)
+    $drawBtn.prop('disabled', true)
   }
 
   function declineDrawOfferLocally() {
-    $('#draw_btn').prop('accept', false)
-    $('#draw_btn').removeClass('bg-warning')
-  }
-
-  function checkOrientation() {
-    var viewportWidth = window.innerWidth
-    var viewportHeight = window.innerHeight
-
-    // Ignore quite large devices
-    if (Math.min(viewportWidth, viewportHeight) >= 550) {
-      return
-    }
-
-    if (viewportHeight > viewportWidth) {
-      alert('Please, use the landscape mode') // TODO: something beautiful
-    }
+    $drawBtn.prop('accept', false)
+    $drawBtn.removeClass('is-warning')
+    $drawBtn.removeClass('has-text-weight-bold')
+    $drawBtn.text('Draw')
   }
 
   function updateBoardSize() {
@@ -386,11 +383,7 @@
     var viewportHeight = window.innerHeight
 
     var containerSize
-    if (viewportWidth < 992) {
-      $('#moves_list').css('display', 'none')
-      $('#info_a').css('display', 'none')
-      $('#info_b').css('display', 'none')
-
+    if (viewportWidth < 1024) {
       if ($('#clock_a').css('display') === 'none') {
         containerSize = Math.floor(
           Math.min(viewportWidth / 10 * 8, viewportHeight / 10 * 8)
@@ -402,10 +395,6 @@
         )
       }
     } else {
-      $('#moves_list').css('display', 'block')
-      $('#info_a').css('display', 'block')
-      $('#info_b').css('display', 'block')
-
       containerSize = Math.floor(
         Math.min((viewportWidth - $('#right_container').width()) / 10 * 8,
                   viewportHeight / 10 * 8)
@@ -419,14 +408,17 @@
     highlightLastMove()
 
     var boardPos = $board.position()
-    $('#buttons_container').css('top', boardPos.top + 30)
-    $('#buttons_container').css('left', boardPos.left + $board.width() + 3)
   }
 
   // should be called before EVERY animation
   function blockAnimation() {
     animation = true
-    setTimeout(function() { animation = false }, config.moveSpeed + 30)
+    setTimeout(
+      function() {
+        animation = false
+      },
+      config.moveSpeed + 30
+    )
   }
 
   var config = {
@@ -449,9 +441,6 @@
     }
   })
 
-  $(window).on('load', checkOrientation)
-  $(window).resize(checkOrientation)
-
   $(window).on('load', updateBoardSize)
   $(window).resize(updateBoardSize)
 
@@ -461,7 +450,10 @@
   var sio = io({
     transports: ['websocket'],
     upgrade: false,
-    query: {game_id: gameId}
+    query: {
+      request_type: 'game',
+      game_id: gameId
+    }
   })
 
   sio.on('game_started', onGameStarted)
@@ -484,16 +476,15 @@
     sendMessage()
   })
   */
-  $('#draw_btn').on('click', function(e) {
-    var $btn = $('#draw_btn')
-    if ($btn.prop('accept')) {
+  $drawBtn.on('click', function(e) {
+    if ($drawBtn.prop('accept')) {
       acceptDrawOffer()
     } else {
       makeDrawOffer()
     }
   })
 
-  $('#resign_btn').on('click', function(e) {
+  $resignBtn.on('click', function(e) {
     sio.emit('resign')
   })
 
@@ -576,12 +567,12 @@
   function pushToMovesList(move, indx) {
     $movesList.find('.halfmove').removeClass('halfmove-active')
     if (indx % 2 === 0) {
-      $movesList.append(`<div class='row move'>
+      $movesList.append(`<div class='columns move mx-0 my-0 px-0 py-0'>
                           <div id='move_${indx}'
-                               class='col halfmove halfmove-active'>
+                               class='column is-half mx-0 my-0 pl-3 py-0 halfmove halfmove-active'>
                             ${move}
                           </div>
-                          <div class='col'></div>
+                          <div class='column is-half mx-0 my-0 pl-3 py-0'></div>
                          </div>`)
     } else {
       var $moveCell = $movesList.children().last().children().last()
@@ -617,20 +608,29 @@
   $('#new_game_btn').on('click', function(e) {
     e.preventDefault()
     sio.emit('search_game', {game_id: gameId})
-    $('#stop_search_btn').css('display', 'block')
-    $('#new_game_btn').css('display', 'none')
+    $('#new_game_btn').addClass('is-hidden')
+    $('#stop_search_btn').removeClass('is-hidden')
   })
 
   $('#stop_search_btn').on('click', function(e) {
     e.preventDefault()
     sio.emit('cancel_search')
-    $('#new_game_btn').css('display', 'block')
-    $('#stop_search_btn').css('display', 'none')
+    $('#new_game_btn').removeClass('is-hidden')
+    $('#stop_search_btn').addClass('is-hidden')
   })
 
-  // Stop search, if modal is closed.
-  $('#game_results_modal').on('hide.bs.modal', function() {
-    // Means, that we're in search.
+
+  // Hide modal on press out of it
+  $('.modal-background').on('click', function() {
+    $modal.addClass('animate__fadeOut')
+    setTimeout(
+      function() {
+        $modal
+          .removeClass('animate__animated animate__fadeOut animate__fadeIn is-active')
+      },
+      110
+    )
+    // Stop search, if modal is closed.
     if ($('#stop_game_btn').css('display') !== 'none') {
       sio.emit('cancel_search')
     }

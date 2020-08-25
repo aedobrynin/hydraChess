@@ -1,44 +1,30 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<head>
-  <link rel='stylesheet'
-        type='text/css'
-        href='{{ url_for('static', filename='css/user_profile.css') }}'>
-</head>
 <body>
-  <div class="container pt-3 pb-3">
-    <div class="d-flex flex-column flex-lg-row mx-auto">
-      <div class="col-4">
-        <img class="profile_img" src="{{ url_for('static', filename='img/profiles/' + avatar_hash + '.jpg') }}"></img>
-      </div>
-      <div class="col-8 my-auto">
-        <p class="nickname my-0">{{ nickname }}</p>
-        <p class="rating my-0">Current rating: <a class="rating-value">{{ rating }}</a></h2>
+  <div class="container mt-1 mb-2">
+    <div class="box">
+      <div class="columns is-mobile">
+        <div class="column is-narrow is-hidden-mobile">
+          <figure class="image is-256x256">
+            <img src="{{ url_for('static', filename='img/profiles/' + avatar_hash + '.jpg') }}"></img>
+          </figure>
+        </div>
+        <div class="column is-pulled-left">
+          <h1 class="title is-1">{{ nickname }}</h1>
+          <h2 class="subtitle is-4">Rating: {{ rating }}</h2>
+        </div>
       </div>
     </div>
-    <div class="d-flex flex-column">
-      <div id='games_history' style="display: none">
-        <h1 class='text-light'>Latest games</h1>
-        <div id='select_buttons_container'>
-          <button id='first_page_select'>First</button>
-          <button id='prev_page_select'><</button>
-          <span id='cur_page_container' class='text-light font-weight-bold'></span>
-          <button id='next_page_select'>></button>
-          <button id='last_page_select'>Last</button>
-        </div>
-        <table class='table table-light'>
-          <thead>
-            <tr>
-              <th scope='col'>White player</th>
-              <th scope='col'>Black player</th>
-              <th scope='col'>Result</th>
-            </tr>
-          </thead>
-          <tbody id='games_container'>
-          </tbody>
-        </table>
-        </div>
+    <div id='games_history' class="box is-hidden">
+      <h1 class="title is-3">Latest games</h1>
+      <nav class="pagination" role="navigation" aria-label="pagination">
+        <ul class="pagination-list"></ul>
+      </nav>
+      <table class="table is-fullwidth is-hoverable">
+        <tbody id='games_container'>
+        </tbody>
+      </table>
     </div>
   </div>
 </body>
@@ -49,17 +35,13 @@
 <script>
 ;(function() {
   const gamesOnPage = 10
+  const paginationSize = 5
   var gamesPlayed
   var totalPages
   var curPage = 1
-  var $buttonsContainer = $('#select_buttons_container')
-  var $firstPageSelect = $('#first_page_select')
-  var $prevPageSelect = $('#prev_page_select')
-  var $nextPageSelect = $('#next_page_select')
-  var $lastPageSelect = $('#last_page_select')
-  var $curPageContainer = $('#cur_page_container')
-  var $gamesContainer = $('#games_container')
 
+	$paginationList = $('.pagination-list')
+  $gamesContainer = $('#games_container')
 
   function initGamesHistory(data) {
     gamesPlayed = data['games_played']
@@ -69,39 +51,59 @@
       return
     }
 
-    $('#games_history').show()
-    $firstPageSelect.attr('page-select', 1)
-    $firstPageSelect.prop('disabled', true)
+		for (let i = 1; i <= Math.min(paginationSize, totalPages); ++i) {
+			if (i == 1) {
+				$paginationList.append(
+					`<li><a class="pagination-link is-current" page-indx=${i} aria-label="Page ${i}">${i}</a></li>`
+				)
+			} else {
+				$paginationList.append(
+					`<li><a class="pagination-link" page-indx=${i} aria-label="Page ${i}">${i}</a></li>`
+				)
+			}
+		}
 
-    $prevPageSelect.attr('page-select', 0)
-    $prevPageSelect.prop('disabled', true)
-
-    $nextPageSelect.attr('page-select', 2)
-    $nextPageSelect.prop('disabled', curPage === totalPages)
-
-    $lastPageSelect.attr('page-select', totalPages)
-    $lastPageSelect.prop('disabled', totalPages === 1)
-
-    $curPageContainer.html('1')
+    $('#games_history').removeClass("is-hidden")
   }
 
 
-  $('body').on('click', 'button[page-select]', function() {
-    curPage = parseInt(this.getAttribute('page-select'))
+  $('body').on('click', '.pagination-link[page-indx]', function() {
+    curPage = parseInt(this.getAttribute('page-indx'))
 
-    $firstPageSelect.prop('disabled', curPage === 1)
+		$paginationList.html('')
 
-    $prevPageSelect.attr('page-select', curPage - 1)
-    $prevPageSelect.prop('disabled', curPage === 1)
+    var toSide = Math.floor(paginationSize / 2)
 
-    $nextPageSelect.attr('page-select', curPage + 1)
-    $nextPageSelect.prop('disabled', curPage === totalPages)
+    var firstPage
+    var lastPage
 
-    $lastPageSelect.prop('disabled', curPage === totalPages)
+    if (curPage - toSide >= 1 && curPage + toSide <= totalPages) {
+      firstPage = curPage - toSide
+      lastPage = Math.min(totalPages, curPage + toSide)
+    } else if (curPage - toSide < 1) {
+      firstPage = 1
+      lastPage = Math.min(paginationSize, totalPages)
+    } else if (curPage + toSide > totalPages) {
+      lastPage = totalPages
+      firstPage = Math.max(1, totalPages - paginationSize + 1)
+    } else {
+      firstPage = 1
+      lastPage = totalPages
+    }
 
-    $curPageContainer.html(curPage)
+    for (let i = firstPage; i <= lastPage; ++i) {
+			if (i == curPage) {
+				$paginationList.append(
+					`<li><a class="pagination-link is-current" page-indx=${i} aria-label="Page ${i}">${i}</a></li>`
+				)
+			} else {
+				$paginationList.append(
+					`<li><a class="pagination-link" page-indx=${i} aria-label="Page ${i}">${i}</a></li>`
+				)
+			}
+		}
 
-    $.get(
+		$.get(
       "/api/v1.x/games_list",
       {
         nickname: "{{ nickname }}",
@@ -120,9 +122,11 @@
     data['games'].forEach(function(item) {
       $gamesContainer.
         append(`<tr data-href='/game/${item.id}' style="cursor: pointer">
-                <td><a href='/user/${item.white_player}'>${item.white_player}</a></td>
-                <td><a href='/user/${item.black_player}'>${item.black_player}</a></td>
-                <td>${item.result}</td>
+                <td width=10%><a href='/user/${item.white_player}'>${item.white_player}</a></td>
+                <td width=3%>VS</td>
+                <td width=10%><a href='/user/${item.black_player}'>${item.black_player}</a></td>
+                <td width=10%>${item.result}</td>
+                <td>${item.moves_cnt} ${item.moves_cnt == 1 ? 'move' : 'moves'}</td>
               </tr>`
         )
     })
