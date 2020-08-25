@@ -6,6 +6,7 @@
         href='https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css'
         integrity='sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU'
         crossorigin='anonymous'>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.0/animate.min.css" integrity="sha512-kb1CHTNhoLzinkElTgWn246D6pX22xj8jFNKsDmVwIQo+px7n1yjJUZraVuR/ou6Kmgea4vZXZeUDbqKtXkEMg==" crossorigin="anonymous" />
   <link rel='stylesheet'
         type='text/css'
         href='{{ url_for('static', filename='css/game.css') }}'>
@@ -14,50 +15,50 @@
   <div class='container'>
     <div class='columns mt-1 is-vcentered is-mobile is-centered'>
       <div id='board' class='column is-narrow'></div>
-      <div id='buttons_container' class='rounded-right is-hidden'>
-        <button id='draw_btn' class='btn game-btn m-0 p-0'>Draw</button>
-        <hr class='mx-auto my-1' style='width: 50px'>
-        <button id='resign_btn' class='btn game-btn m-0 p-0'>Resign</button>
+      <div id='buttons_container' class='rounded-right mx-0 my-0 px-0 py-0'>
+        <button id='draw_btn' class='button game-btn mx-0 my-0 px-0 py-0'>Draw</button>
+        <hr class='my-1' style='width: 50px; background-color: grey;'>
+        <button id='resign_btn' class='button game-btn mx-0 my-0 px-0 py-0'>Resign</button>
       </div>
-      <div id='right_container' class='column is-narrow is-hidden-touch'>
+      <div id='right_container' class='column is-narrow'>
         <div id='clock_a' class='clock'></div>
-        <div id='info_a' class='player-info'></div>
-        <div id='moves_list'></div>
-        <div id='info_b' class='player-info'></div>
+        <div id='info_a' class='player-info is-hidden-touch'></div>
+        <div id='moves_list' class='is-hidden-touch'></div>
+        <div id='info_b' class='player-info is-hidden-touch'></div>
         <div id='clock_b' class='clock'></div>
       </div>
     </div>
   </div>
   <!-- Modal -->
-  <div id="game_results_modal" class="modal fade is-hidden" id="modal" tabindex="-1"
+  <div id="game_results_modal" class="modal" id="modal" tabindex="-1"
        role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document"
-         style="width: 300px">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title mx-auto">Game over</h5>
+    <div class='modal-background'></div>
+    <div class='modal-content'>
+      <div class='box mx-6'>
+        <div class='columns is-centered has-text-centered'>
+          <div id='game_result_container'
+               class='column is-narrow'
+               style='font-size: 20px'></div>
         </div>
-        <div id='game_results_container' class="modal-body text-center"></div>
-        <div class="modal-footer">
-          <button id="new_game_btn"
-                  type="button"
-                  class="btn btn-primary w-100">New game</button>
-          <button id="stop_search_btn"
-                  type="button"
-                  class="btn btn-secondary w-100">Stop search</button>
+        <div class='columns is-centered'>
+          <div class='column is-narrow'>
+            <button id="new_game_btn"
+                    class="button is-primary is-outlined">New game</button>
+            <button id="stop_search_btn"
+                    class="button">Stop search</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div id='first_move_alert' class="alert alert-warning is-hidden collapse notification"
-       role="alert">
+  <div id='first_move_notification'
+    class="notification is-warning is-light is-hidden">
     The game will be canceled, if you won't make first move in
       <span id='first_move_seconds'></span> seconds.
   </div>
-  <div id='opp_disconnected_alert'
-       class="alert alert-warning collapse notification is-hidden"
-       role='alert'>
+  <div id='opp_disconnected_notification'
+    class="notification is-link is-light is-hidden">
     Opponent disconnected. You'll win in
     <span id='reconnect_wait_seconds'></span> seconds.
   </div>

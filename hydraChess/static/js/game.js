@@ -15,10 +15,12 @@
 
   var animation = false
 
-  var $firstMoveAlert = $('#first_move_alert')
+  var $modal = $('#game_results_modal')
+
+  var $firstMoveNotification = $('#first_move_notification')
   var firstMoveTimer = new Timer('first_move_seconds')
 
-  var $oppDisconnectedAlert = $('#opp_disconnected_alert')
+  var $oppDisconnectedNotification = $('#opp_disconnected_notification')
   var oppDisconnectedTimer = new Timer('reconnect_wait_seconds')
 
   var clockPair = new ClockPair(['clock_a', 'clock_b'], 0)
@@ -157,7 +159,8 @@
     // illegal move
     if (move === null) return 'snapback'
 
-    $firstMoveAlert.hide()
+    $firstMoveNotification.addClass('is-hidden')
+    $firstMoveNotification.removeClass('animate__animated animate__fadeIn')
     firstMoveTimer.stop()
 
     if (!game.game_over()) {
@@ -282,10 +285,12 @@
     setResults(data.result)
 
     if (color === null) return // Do not do next things, If we are spectators.
-    $firstMoveAlert.hide()
+    $firstMoveNotification.addClass('is-hidden')
+    $firstMoveNotification.removeClass('animate__animated animate__fadeIn')
     firstMoveTimer.stop()
 
-    $oppDisconnectedAlert.hide()
+    $oppDisconnectedNotification.addClass('is-hidden')
+    $oppDisconnectedNotification.removeClass('animate__animated animate__fadeIn')
     oppDisconnectedTimer.stop()
 
     // Calculate ratingDelta for modal
@@ -311,9 +316,9 @@
     }
     rating += parseInt(ratingDelta)
 
-    $('#game_results_container')
+    $('#game_result_container')
       .append(`${data.reason}<br />Your new rating: ${rating} (${ratingDelta})`)
-    $('#game_results_modal').modal('show')
+    $modal.addClass('animate__animated animate__fadeIn is-active')
 
     gameEndedSound.play()
     gameFinished = true
@@ -325,12 +330,12 @@
     firstMoveTimer.stop()
     firstMoveTimer.setTime(waitTime)
     firstMoveTimer.start()
-    $firstMoveAlert.fadeIn()
+    $firstMoveNotification.toggleClass('animate__animated animate__fadeIn is-hidden')
   }
 
   function onOppDisconnected(data) {
     // In order to do not make overlapping alerts.
-    if ($firstMoveAlert.css('display') !== 'none') {
+    if ($firstMoveNotification.hasClass('is-hidden') === false) {
       return
     }
 
@@ -339,11 +344,13 @@
     oppDisconnectedTimer.stop()
     oppDisconnectedTimer.setTime(waitTime)
     oppDisconnectedTimer.start()
-    $oppDisconnectedAlert.fadeIn()
+    $oppDisconnectedNotification.toggleClass('animate__animated animate__fadeIn is-hidden')
+    $oppDisconnectedNotification.fadeIn()
   }
 
   function onOppReconnected() {
-    $oppDisconnectedAlert.hide()
+    $oppDisconnectedNotification.addClass('is-hidden')
+    $oppDisconnectedNotification.removeClass('animate__animated animate__fadeIn')
     oppDisconnectedTimer.stop()
   }
 
@@ -387,9 +394,16 @@
 
     var containerSize
     if (viewportWidth < 1024) {
-      containerSize = Math.floor(
-        Math.min(viewportWidth / 10 * 8, viewportHeight / 10 * 8)
-      )
+      if ($('#clock_a').css('display') === 'none') {
+        containerSize = Math.floor(
+          Math.min(viewportWidth / 10 * 8, viewportHeight / 10 * 8)
+        )
+      } else {
+        containerSize = Math.floor(
+          Math.min((viewportWidth - $('#clock_a').width()) / 10 * 8,
+                    viewportHeight / 10 * 8)
+        )
+      }
     } else {
       containerSize = Math.floor(
         Math.min((viewportWidth - $('#right_container').width()) / 10 * 8,
@@ -411,7 +425,12 @@
   // should be called before EVERY animation
   function blockAnimation() {
     animation = true
-    setTimeout(function() { animation = false }, config.moveSpeed + 30)
+    setTimeout(
+      function() {
+        animation = false
+      },
+      config.moveSpeed + 30
+    )
   }
 
   var config = {
@@ -616,9 +635,18 @@
     $('#stop_search_btn').css('display', 'none')
   })
 
-  // Stop search, if modal is closed.
-  $('#game_results_modal').on('hide.bs.modal', function() {
-    // Means, that we're in search.
+
+  // Hide modal on press out of it
+  $('.modal-background').on('click', function() {
+    $modal.addClass('animate__fadeOut')
+    setTimeout(
+      function() {
+        $modal
+          .removeClass('animate__animated animate__fadeOut animate__fadeIn is-active')
+      },
+      110
+    )
+    // Stop search, if modal is closed.
     if ($('#stop_game_btn').css('display') !== 'none') {
       sio.emit('cancel_search')
     }

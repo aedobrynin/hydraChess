@@ -61,7 +61,7 @@
     setTimeout(
       function() {
         $modal
-          .removeClass('animate__animated animate__fadeOut animatefadeIn is-active')
+          .removeClass('animate__animated animate__fadeOut animate__fadeIn is-active')
 
         },
       110
