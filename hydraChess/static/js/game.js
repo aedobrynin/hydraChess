@@ -386,26 +386,11 @@
     var viewportHeight = window.innerHeight
 
     var containerSize
-    if (viewportWidth < 992) {
-      $('#moves_list').css('display', 'none')
-      $('#info_a').css('display', 'none')
-      $('#info_b').css('display', 'none')
-
-      if ($('#clock_a').css('display') === 'none') {
-        containerSize = Math.floor(
-          Math.min(viewportWidth / 10 * 8, viewportHeight / 10 * 8)
-        )
-      } else {
-        containerSize = Math.floor(
-          Math.min((viewportWidth - $('#clock_a').width()) / 10 * 8,
-                    viewportHeight / 10 * 8)
-        )
-      }
+    if (viewportWidth < 1024) {
+      containerSize = Math.floor(
+        Math.min(viewportWidth / 10 * 8, viewportHeight / 10 * 8)
+      )
     } else {
-      $('#moves_list').css('display', 'block')
-      $('#info_a').css('display', 'block')
-      $('#info_b').css('display', 'block')
-
       containerSize = Math.floor(
         Math.min((viewportWidth - $('#right_container').width()) / 10 * 8,
                   viewportHeight / 10 * 8)
