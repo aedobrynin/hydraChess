@@ -1,3 +1,4 @@
+hydraChess/static/css/bulma.css
 *.swp
 dev/*
 dev_pypy/*
