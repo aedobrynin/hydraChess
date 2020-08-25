@@ -7,7 +7,6 @@
   var gameFinished = null
 
   var rating
-  var ratingChanges = null
 
   var $movesList = $('#moves_list')
   var movesArray = null
@@ -220,7 +219,6 @@
         rating = data['black_user']['rating']
         board.orientation('black')
       }
-      ratingChanges = data.rating_changes
 
       // Show draw and resign buttons.
       if (data.result === undefined) {
@@ -293,24 +291,7 @@
     $oppDisconnectedNotification.removeClass('animate__animated animate__fadeIn')
     oppDisconnectedTimer.stop()
 
-    // Calculate ratingDelta for modal
-    var ratingDelta = 0
-    if (data.result === '1/2-1/2') {
-      ratingDelta = ratingChanges['draw']
-    } else if (color === 'w') {
-      if (data.result === '1-0') {
-        ratingDelta = ratingChanges['win']
-      } else if (data.result === '0-1') {
-        ratingDelta = ratingChanges['lose']
-      }
-    } else {
-      if (data.result === '1-0')        {
-        ratingDelta = ratingChanges['lose']
-      } else if (data.result === '0-1') {
-        ratingDelta = ratingChanges['win']
-      }
-    }
-
+    var ratingDelta = data.rating_deltas[color]
     if (ratingDelta > 0) {
       ratingDelta = '+' + ratingDelta
     }

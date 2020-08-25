@@ -68,7 +68,6 @@ def send_game_info(game_id: int, room_id: int, is_player: bool):
                 data["can_send_draw_offer"] = True
             else:
                 data["can_send_draw_offer"] = False
-            data['rating_changes'] = rating_changes[data['color']].to_dict()
     else:
         data["result"] = game.result
 
@@ -442,10 +441,6 @@ def end_game(game_id: int,
     data = {'result': result}
     sio.emit('game_ended', data, room=game_id)  # Emit to spectators
 
-    data['reason'] = reason
-    sio.emit('game_ended', data, room=game.white_user.sid)
-    sio.emit('game_ended', data, room=game.black_user.sid)
-
     with rom.util.EntityLock(game, 10, 10):
         game.is_finished = 1
         game.result = result
@@ -475,12 +470,28 @@ def end_game(game_id: int,
     if result == "1-0":
         update_rating.delay(game.white_user.id, rating_changes["w"].win)
         update_rating.delay(game.black_user.id, rating_changes["b"].lose)
+        data['rating_deltas'] = {
+            'w': rating_changes['w'].win,
+            'b': rating_changes['b'].lose
+        }
     elif result == "1/2-1/2":
         update_rating.delay(game.white_user.id, rating_changes["w"].draw)
         update_rating.delay(game.black_user.id, rating_changes["b"].draw)
+        data['rating_deltas'] = {
+            'w': rating_changes['w'].draw,
+            'b': rating_changes['b'].draw
+        }
     elif result == "0-1":
         update_rating.delay(game.white_user.id, rating_changes["w"].lose)
         update_rating.delay(game.black_user.id, rating_changes["b"].win)
+        data['rating_deltas'] = {
+            'w': rating_changes['w'].lose,
+            'b': rating_changes['b'].win
+        }
+
+    data['reason'] = reason
+    sio.emit('game_ended', data, room=game.white_user.sid)
+    sio.emit('game_ended', data, room=game.black_user.sid)
 
     update_k_factor.delay(game.white_user.id)
     update_k_factor.delay(game.black_user.id)
