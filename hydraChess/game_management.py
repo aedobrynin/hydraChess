@@ -454,39 +454,42 @@ def end_game(game_id: int,
 
         game.save()
 
-    if update_stats is False:
-        return
+    if update_stats:
+        rating_changes = get_rating_changes(game_id)
 
-    rating_changes = get_rating_changes(game_id)
+        with rom.util.EntityLock(game.white_user, 10, 10):
+            game.white_user.games_played += 1
+            game.white_user.save()
 
-    with rom.util.EntityLock(game.white_user, 10, 10):
-        game.white_user.games_played += 1
-        game.white_user.save()
+        with rom.util.EntityLock(game.black_user, 10, 10):
+            game.black_user.games_played += 1
+            game.black_user.save()
 
-    with rom.util.EntityLock(game.black_user, 10, 10):
-        game.black_user.games_played += 1
-        game.black_user.save()
-
-    if result == "1-0":
-        update_rating.delay(game.white_user.id, rating_changes["w"].win)
-        update_rating.delay(game.black_user.id, rating_changes["b"].lose)
+        if result == "1-0":
+            update_rating.delay(game.white_user.id, rating_changes["w"].win)
+            update_rating.delay(game.black_user.id, rating_changes["b"].lose)
+            data['rating_deltas'] = {
+                'w': rating_changes['w'].win,
+                'b': rating_changes['b'].lose
+            }
+        elif result == "1/2-1/2":
+            update_rating.delay(game.white_user.id, rating_changes["w"].draw)
+            update_rating.delay(game.black_user.id, rating_changes["b"].draw)
+            data['rating_deltas'] = {
+                'w': rating_changes['w'].draw,
+                'b': rating_changes['b'].draw
+            }
+        elif result == "0-1":
+            update_rating.delay(game.white_user.id, rating_changes["w"].lose)
+            update_rating.delay(game.black_user.id, rating_changes["b"].win)
+            data['rating_deltas'] = {
+                'w': rating_changes['w'].lose,
+                'b': rating_changes['b'].win
+            }
+    else:
         data['rating_deltas'] = {
-            'w': rating_changes['w'].win,
-            'b': rating_changes['b'].lose
-        }
-    elif result == "1/2-1/2":
-        update_rating.delay(game.white_user.id, rating_changes["w"].draw)
-        update_rating.delay(game.black_user.id, rating_changes["b"].draw)
-        data['rating_deltas'] = {
-            'w': rating_changes['w'].draw,
-            'b': rating_changes['b'].draw
-        }
-    elif result == "0-1":
-        update_rating.delay(game.white_user.id, rating_changes["w"].lose)
-        update_rating.delay(game.black_user.id, rating_changes["b"].win)
-        data['rating_deltas'] = {
-            'w': rating_changes['w'].lose,
-            'b': rating_changes['b'].win
+            'w': 0,
+            'b': 0
         }
 
     data['reason'] = reason

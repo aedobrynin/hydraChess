@@ -273,6 +273,7 @@
   }
 
   function onGameEnded(data) {
+    alert()
     /*
     $('#message_input').prop('readonly', true)
     */
