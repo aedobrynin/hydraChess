@@ -657,10 +657,19 @@ def update_rating(user_id: int, rating_delta: int) -> None:
 
 
 @celery.task(name="search_game", ignore_result=True)
-def search_game(user_id: int, seconds: int) -> None:
+def search_game(user_id: int, minutes: int) -> None:
     '''If there is appropriate game request, it starts a new game.
        Else it makes the game request and adds it to the database.'''
     user = User.get(user_id)
+
+    if user.cur_game_id or user.in_search:
+        return
+
+    if minutes not in (1, 2, 3, 5, 10, 15, 20, 30, 60):
+        return
+
+    seconds = minutes * 60
+
     with rom.util.EntityLock(user, 10, 10):
         game_requests = \
                 rom.query.Query(GameRequest).filter(time=seconds).all()

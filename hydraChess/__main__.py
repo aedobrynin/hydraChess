@@ -152,10 +152,6 @@ def user_profile(nickname: str):
 @sio.on('search_game')
 @authenticated_only
 def on_search_game(*args, **kwargs):
-    if any([current_user.cur_game_id, current_user.in_search]):
-        print("Already in search/in game")
-        return
-
     if not(args and isinstance(args[0], dict)):
         print("Bad arguments")
         return
@@ -164,18 +160,18 @@ def on_search_game(*args, **kwargs):
     # If valid game_id provided, create game request with the same game time as
     # the game.
     minutes = args[0].get('minutes', None)
-    if isinstance(minutes, int) is False or\
-            minutes not in (1, 2, 3, 5, 10, 15, 30, 60, 120):
-        try:
-            game_id = args[0].get('game_id', None)
-            game = Game.get(game_id)
-            if not game:
-                return
-            minutes = game.total_clock.total_seconds() // 60
-        except (ValueError, TypeError):
+    if minutes is None:
+        game_id = args[0].get('game_id', None)
+        if not game_id:
             return
+        game = Game.get(game_id)
+        if not game:
+            return
+        minutes = game.total_clock.total_seconds() // 60
+    elif type(minutes) != int:
+        return
 
-    game_management.search_game.delay(current_user.id, minutes * 60)
+    game_management.search_game.delay(current_user.id, minutes)
 
 
 @sio.on('cancel_search')

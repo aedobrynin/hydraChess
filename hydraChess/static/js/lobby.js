@@ -6,9 +6,9 @@
     {name: '5 minutes', minutes: 5},
     {name: '10 minutes', minutes: 10},
     {name: '15 minutes', minutes: 15},
+    {name: '20 minutes', minutes: 20},
     {name: '30 minutes', minutes: 30},
     {name: '1 hour', minutes: 60},
-    {name: '2 hours', minutes: 120}
   ]
 
   var $select = $('#mobile_time_select')
