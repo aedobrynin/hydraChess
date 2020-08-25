@@ -22,6 +22,8 @@
   var $oppDisconnectedNotification = $('#opp_disconnected_notification')
   var oppDisconnectedTimer = new Timer('reconnect_wait_seconds')
 
+  var $drawBtn = $('#draw_btn')
+
   var clockPair = new ClockPair(['clock_a', 'clock_b'], 0)
   clockPair.hide()
 
@@ -223,8 +225,8 @@
       // Show draw and resign buttons.
       if (data.result === undefined) {
         $('#buttons_container').css('display', 'block')
-        $('#draw_btn').prop('accept', false)
-        $('#draw_btn').prop('disabled', !data.can_send_draw_offer)
+        $drawBtn.prop('accept', false)
+        $drawBtn.prop('disabled', !data.can_send_draw_offer)
       }
     }
 
@@ -269,7 +271,7 @@
       moveSound.play()
     }
 
-    $('#draw_btn').prop('disabled', false)
+    $drawBtn.prop('disabled', false)
   }
 
   function onGameEnded(data) {
@@ -336,8 +338,8 @@
   }
 
   function onDrawOffer() {
-    $('#draw_btn').prop('accept', true)
-    $('#draw_btn').addClass('bg-warning')
+    $drawBtn.prop('accept', true)
+    $drawBtn.addClass('is-warning')
     drawOfferSound.play()
   }
 
@@ -347,12 +349,12 @@
 
   function makeDrawOffer() {
     sio.emit('make_draw_offer')
-    $('#draw_btn').prop('disabled', true)
+    $drawBtn.prop('disabled', true)
   }
 
   function declineDrawOfferLocally() {
-    $('#draw_btn').prop('accept', false)
-    $('#draw_btn').removeClass('bg-warning')
+    $drawBtn.prop('accept', false)
+    $drawBtn.removeClass('bg-warning')
   }
 
   function checkOrientation() {
@@ -472,9 +474,8 @@
     sendMessage()
   })
   */
-  $('#draw_btn').on('click', function(e) {
-    var $btn = $('#draw_btn')
-    if ($btn.prop('accept')) {
+  $drawBtn.on('click', function(e) {
+    if ($drawBtn.prop('accept')) {
       acceptDrawOffer()
     } else {
       makeDrawOffer()
@@ -605,15 +606,15 @@
   $('#new_game_btn').on('click', function(e) {
     e.preventDefault()
     sio.emit('search_game', {game_id: gameId})
-    $('#stop_search_btn').css('display', 'block')
-    $('#new_game_btn').css('display', 'none')
+    $('#new_game_btn').addClass('is-hidden')
+    $('#stop_search_btn').removeClass('is-hidden')
   })
 
   $('#stop_search_btn').on('click', function(e) {
     e.preventDefault()
     sio.emit('cancel_search')
-    $('#new_game_btn').css('display', 'block')
-    $('#stop_search_btn').css('display', 'none')
+    $('#new_game_btn').removeClass('is-hidden')
+    $('#stop_search_btn').addClass('is-hidden')
   })
 
 

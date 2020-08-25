@@ -15,15 +15,20 @@
   <div class='container'>
     <div class='columns mt-1 is-vcentered is-mobile is-centered'>
       <div id='board' class='column is-narrow'></div>
-      <div id='buttons_container' class='rounded-right mx-0 my-0 px-0 py-0'>
-        <button id='draw_btn' class='button game-btn mx-0 my-0 px-0 py-0'>Draw</button>
-        <hr class='my-1' style='width: 50px; background-color: grey;'>
-        <button id='resign_btn' class='button game-btn mx-0 my-0 px-0 py-0'>Resign</button>
-      </div>
       <div id='right_container' class='column is-narrow'>
         <div id='clock_a' class='clock'></div>
         <div id='info_a' class='player-info is-hidden-touch'></div>
         <div id='moves_list' class='is-hidden-touch'></div>
+        <div id='buttons_container'>
+          <div class='columns mx-0 my-0 px-0 py-0 is-desktop'>
+            <div class='column px-0 py-0'>
+              <button id='draw_btn' class='button is-text result-btn'>Draw</button>
+            </div>
+            <div class='column px-0 py-0'>
+              <button id='resign_btn' class='button is-text result-btn'>Resign</button>
+            </div>
+          </div>
+        </div>
         <div id='info_b' class='player-info is-hidden-touch'></div>
         <div id='clock_b' class='clock'></div>
       </div>
@@ -45,7 +50,7 @@
             <button id="new_game_btn"
                     class="button is-primary is-outlined">New game</button>
             <button id="stop_search_btn"
-                    class="button">Stop search</button>
+                    class="button is-hidden">Stop search</button>
           </div>
         </div>
       </div>
