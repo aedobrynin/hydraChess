@@ -92,7 +92,7 @@ def game_page(game_id: int):
         return render_template('404.html'), 404
     return render_template('game.html', title='Game - Hydra Chess')
 
-
+  
 @app.route('/sign_up', methods=['GET', 'POST'])
 def sign_up():
     if current_user.is_authenticated:
