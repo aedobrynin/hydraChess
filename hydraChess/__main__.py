@@ -90,13 +90,6 @@ def game_page(game_id: int):
     game = Game.get(game_id)
     if not game:
         return render_template('404.html'), 404
-
-    if game.is_finished:
-        return render_template(
-                'game_static.html',
-                title='Game - Hydra Chess'
-        )
-
     return render_template('game.html', title='Game - Hydra Chess')
 
 
@@ -219,20 +212,24 @@ def on_send_message(*args, **kwargs) -> None:
 
 @sio.on('connect')
 def on_connect(*args, **kwargs) -> None:
-    game_id = request.args.get('game_id')
-
-    if not game_id:  # We are in lobby
-        if current_user.is_authenticated:
-            cur_user = User.get(current_user.id)
-            with EntityLock(cur_user, 10, 10):
-                cur_user.sid = request.sid
-                cur_user.save()
-        else:
-            disconnect()
+    request_type = request.args.get('request_type')
+    if not request_type:
+        disconnect()
         return
 
-    if not game_id.isdigit():  # Bad game id value
+    if current_user.is_authenticated:
+        cur_user = User.get(current_user.id)
+        with EntityLock(cur_user, 10, 10):
+            cur_user.sid = request.sid
+            cur_user.save()
+
+    if request_type == 'lobby' or request_type != 'game':
+        return
+
+    game_id = request.args.get('game_id')
+    if not game_id or not game_id.isdigit():
         disconnect()
+        return
 
     game_id = int(game_id)
     game = Game.get(game_id)
@@ -245,21 +242,16 @@ def on_connect(*args, **kwargs) -> None:
     # Else connect the user to the spectators room
 
     if game.is_finished:
-        disconnect()
-        #  Render template
-    else:
-        if current_user.is_authenticated:
-            cur_user = User.get(current_user.id)
-            with EntityLock(cur_user, 10, 10):
-                cur_user.sid = request.sid
-                cur_user.save()
-
-            if current_user.id in (game.white_user.id, game.black_user.id):
-                game_management.reconnect.delay(current_user.id, game_id)
-                return
-
         game_management.send_game_info.delay(game_id, request.sid, False)
-        join_room(game_id)
+        return
+
+    if current_user.is_authenticated:
+        if current_user.id in (game.white_user.id, game.black_user.id):
+            game_management.reconnect.delay(current_user.id, game_id)
+            return
+
+    game_management.send_game_info.delay(game_id, request.sid, False)
+    join_room(game_id)
 
 
 @sio.on('make_draw_offer')

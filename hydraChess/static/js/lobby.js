@@ -5,7 +5,9 @@
 
   var sio = io({
     transports: ['websocket'],
-    upgrade: false})
+    upgrade: false,
+    query: {request_type: 'lobby'}
+  })
 
   sio.on('redirect', function(data) {
     window.location.href = data.url

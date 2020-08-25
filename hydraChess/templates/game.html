@@ -11,28 +11,25 @@
         href='{{ url_for('static', filename='css/game.css') }}'>
 </head>
 <body>
-  <div class="columns">
-    <div id='board'></div>
+  <div class='container'>
+    <div class='columns mt-1 is-vcentered is-mobile is-centered'>
+      <div id='board' class='column is-narrow'></div>
+      <div id='buttons_container' class='rounded-right is-hidden'>
+        <button id='draw_btn' class='btn game-btn m-0 p-0'>Draw</button>
+        <hr class='mx-auto my-1' style='width: 50px'>
+        <button id='resign_btn' class='btn game-btn m-0 p-0'>Resign</button>
+      </div>
+      <div id='right_container' class='column is-narrow'>
+        <div id='clock_a' class='clock'></div>
+        <div id='info_a' class='player-info'></div>
+        <div id='moves_list'></div>
+        <div id='info_b' class='player-info'></div>
+        <div id='clock_b' class='clock'></div>
+      </div>
+    </div>
   </div>
-</body>
-<!--
-<body class='d-flex flex-row justify-content-center align-items-center'>
-  <div id='board' class='fluid-container'></div>
-  <div id='buttons_container' class='rounded-right'>
-    <button id='draw_btn' class='btn game-btn m-0 p-0'>Draw</button>
-    <hr class='mx-auto my-1' style='width: 50px'>
-    <button id='resign_btn' class='btn game-btn m-0 p-0'>Resign</button>
-  </div>
-  <div id='right_container' class='rounded ml-2'>
-    <div id='clock_a' class='clock'></div>
-    <div id='info_a' class='player-info'></div>
-    <div id='moves_list' class='container'></div>
-    <div id='info_b' class='player-info'></div>
-    <div id='clock_b' class='clock'></div>
-  </div>
-
   <!-- Modal -->
-  <div id="game_results_modal" class="modal fade" id="modal" tabindex="-1"
+  <div id="game_results_modal" class="modal fade is-hidden" id="modal" tabindex="-1"
        role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document"
          style="width: 300px">
@@ -53,19 +50,18 @@
     </div>
   </div>
 
-  <div id='first_move_alert' class="alert alert-warning collapse notification"
+  <div id='first_move_alert' class="alert alert-warning is-hidden collapse notification"
        role="alert">
     The game will be canceled, if you won't make first move in
       <span id='first_move_seconds'></span> seconds.
   </div>
   <div id='opp_disconnected_alert'
-       class="alert alert-warning collapse notification"
+       class="alert alert-warning collapse notification is-hidden"
        role='alert'>
     Opponent disconnected. You'll win in
     <span id='reconnect_wait_seconds'></span> seconds.
   </div>
 <body>
-!-->
 {% endblock %}
 
 {% block extra_scripts %}
@@ -84,3 +80,4 @@
 <script src='{{ url_for('static', filename='js/clock.js') }}'></script>
 <script src='{{ url_for('static', filename='js/game.js') }}'></script>
 {% endblock %}
+

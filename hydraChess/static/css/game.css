@@ -86,23 +86,16 @@
 }
 
 .move {
-  padding: 0 !important;
-  margin: 0 !important;
   height: 25px !important;
-}
-
-.halfmove {
-  padding: 0 !important;
-  margin: 0 !important;
-  height: 100% !important;
-  width: 50% !important;
-}
-
-.halfmove-active {
-  background-color: lightsteelblue !important;
 }
 
 .halfmove:hover {
   cursor: pointer;
   background-color: #7C8590;
 }
+
+.halfmove-active {
+  background-color: lightsteelblue !important;
+}
+
+
