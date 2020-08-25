@@ -16,9 +16,9 @@
 
 
 from io import BytesIO
+import re
 import imghdr
 from PIL import Image
-import re
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField,\

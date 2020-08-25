@@ -220,7 +220,7 @@ def resign(user_id: int, game_id: int) -> None:
     game = Game.get(game_id)
 
     # If there is no moves in the game, just cancel it.
-    if not game.raw_moves:
+    if game.get_moves_cnt() < 2:
         end_game.delay(game_id, '-', 'Game canceled.', update_stats=False)
         return
 

@@ -107,10 +107,10 @@ def sign_up():
         return redirect('/')
 
     return render_template(
-            'sign_up.html',
-            title='Sign up - Hydra Chess',
-            form=form
-           )
+        'sign_up.html',
+        title='Sign up - Hydra Chess',
+        form=form
+    )
 
 
 @app.route('/sign_in', methods=['GET', 'POST'])
@@ -125,16 +125,16 @@ def sign_in():
             login_user(user, remember=form.remember_me.data)
             return redirect("/")
         return render_template(
-                'sign_in.html',
-                title="Log in - Hydra Chess",
-                message="Wrong login or password",
-                form=form
-               )
-    return render_template(
             'sign_in.html',
             title="Log in - Hydra Chess",
+            message="Wrong login or password",
             form=form
-           )
+        )
+    return render_template(
+        'sign_in.html',
+        title="Log in - Hydra Chess",
+        form=form
+    )
 
 
 @app.route('/user/<nickname>', methods=['GET'])

@@ -23,6 +23,7 @@
   var oppDisconnectedTimer = new Timer('reconnect_wait_seconds')
 
   var $drawBtn = $('#draw_btn')
+  var $resignBtn = $('#resign_btn')
 
   var clockPair = new ClockPair(['clock_a', 'clock_b'], 0)
   clockPair.hide()
@@ -224,7 +225,7 @@
 
       // Show draw and resign buttons.
       if (data.result === undefined) {
-        $('#buttons_container').css('display', 'block')
+        $('#buttons_container').removeClass('is-hidden')
         $drawBtn.prop('accept', false)
         $drawBtn.prop('disabled', !data.can_send_draw_offer)
       }
@@ -240,8 +241,14 @@
       setResults(data.result)
     }
 
+    if (movesArray.length < 2) {
+      $resignBtn.html('Cancel game')
+    } else {
+      $resignBtn.html('Resign')
+    }
+
     // If game is started, start clocks
-    if (!(getFullmoveNumber() === 1 && game.turn() === 'w')) {
+    if (movesArray.length !== 0) {
       clockPair.start()
     }
 
@@ -266,6 +273,12 @@
     removeHighlights()
     highlightLastMove()
 
+    if (movesArray.length < 2) {
+      $resignBtn.text('Cancel game')
+    } else {
+      $resignBtn.text('Resign')
+    }
+
     // Checking in order to do not do this twice
     if (game.turn() === color && !game.game_over()) {
       moveSound.play()
@@ -279,7 +292,7 @@
     $('#message_input').prop('readonly', true)
     */
 
-    $('#buttons_container').css('display', 'none')
+    $('#buttons_container').addClass('is-hidden')
 
     clockPair.stop()
     setResults(data.result)
@@ -340,6 +353,8 @@
   function onDrawOffer() {
     $drawBtn.prop('accept', true)
     $drawBtn.addClass('is-warning')
+    $drawBtn.addClass('has-text-weight-bold')
+    $drawBtn.text('Accept draw')
     drawOfferSound.play()
   }
 
@@ -354,7 +369,9 @@
 
   function declineDrawOfferLocally() {
     $drawBtn.prop('accept', false)
-    $drawBtn.removeClass('bg-warning')
+    $drawBtn.removeClass('is-warning')
+    $drawBtn.removeClass('has-text-weight-bold')
+    $drawBtn.text('Draw')
   }
 
   function checkOrientation() {
@@ -401,8 +418,6 @@
     highlightLastMove()
 
     var boardPos = $board.position()
-    $('#buttons_container').css('top', boardPos.top + 30)
-    $('#buttons_container').css('left', boardPos.left + $board.width() + 3)
   }
 
   // should be called before EVERY animation
@@ -482,7 +497,7 @@
     }
   })
 
-  $('#resign_btn').on('click', function(e) {
+  $resignBtn.on('click', function(e) {
     sio.emit('resign')
   })
 
