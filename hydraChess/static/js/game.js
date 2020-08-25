@@ -273,7 +273,6 @@
   }
 
   function onGameEnded(data) {
-    alert()
     /*
     $('#message_input').prop('readonly', true)
     */
@@ -316,7 +315,7 @@
   }
 
   function onOppDisconnected(data) {
-    // In order to do not make overlapping alerts.
+    // In order to do not make overlapping notifications.
     if ($firstMoveNotification.hasClass('is-hidden') === false) {
       return
     }

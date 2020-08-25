@@ -101,11 +101,6 @@ def start_game(game_id: int) -> None:
         room=game.white_user.sid,
     )
 
-    game.white_user.append_game_id(game_id)
-    game.black_user.append_game_id(game_id)
-    game.white_user.save()
-    game.black_user.save()
-
 
 @celery.task(name='make_move', ignore_result=True)
 def make_move(user_id: int, game_id: int, move_san: str) -> None:
@@ -459,10 +454,12 @@ def end_game(game_id: int,
 
         with rom.util.EntityLock(game.white_user, 10, 10):
             game.white_user.games_played += 1
+            game.white_user.append_game_id(game_id)
             game.white_user.save()
 
         with rom.util.EntityLock(game.black_user, 10, 10):
             game.black_user.games_played += 1
+            game.black_user.append_game_id(game_id)
             game.black_user.save()
 
         if result == "1-0":
