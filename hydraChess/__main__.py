@@ -165,7 +165,7 @@ def on_search_game(*args, **kwargs):
     # the game.
     minutes = args[0].get('minutes', None)
     if isinstance(minutes, int) is False or\
-            minutes not in (1, 2, 3, 5, 10, 20, 30, 60):
+            minutes not in (1, 2, 3, 5, 10, 15, 30, 60, 120):
         try:
             game_id = args[0].get('game_id', None)
             game = Game.get(game_id)

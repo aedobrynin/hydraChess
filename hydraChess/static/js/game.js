@@ -566,10 +566,10 @@
     if (indx % 2 === 0) {
       $movesList.append(`<div class='columns move mx-0 my-0 px-0 py-0'>
                           <div id='move_${indx}'
-                               class='column is-half mx-0 my-0 px-0 py-0 halfmove halfmove-active'>
+                               class='column is-half mx-0 my-0 pl-3 py-0 halfmove halfmove-active'>
                             ${move}
                           </div>
-                          <div class='column is-half mx-0 my-0 px-0 py-0'></div>
+                          <div class='column is-half mx-0 my-0 pl-3 py-0'></div>
                          </div>`)
     } else {
       var $moveCell = $movesList.children().last().children().last()
