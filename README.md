@@ -31,6 +31,9 @@ In tmux everything looks like this:
 ![tmux](https://user-images.githubusercontent.com/43320720/79076597-11313480-7d04-11ea-8d25-51568a28e69d.png)
 
 
+## Tests
+The API and login system are covered by the tests but the gaming part isn't
+
 ## License
 
 This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details
