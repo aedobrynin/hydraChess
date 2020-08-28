@@ -198,8 +198,6 @@
 
     board.position(game.fen())
 
-    highlightLastMove()
-
     if (data.result === undefined) {
       gameStartedSound.play()
       clockPair.setTimes(data.black_clock, data.white_clock)
@@ -232,6 +230,8 @@
         $drawBtn.prop('disabled', !data.can_send_draw_offer)
       }
     }
+
+    highlightLastMove()
 
     if (board.orientation() === 'white') {
         setPlayersInfo(data.black_user, data.white_user)
