@@ -97,7 +97,6 @@ class SignUpForm(FlaskForm):
         PasswordField(
             'Confirm password',
             validators=[
-                validators.DataRequired(),
                 validators.EqualTo(
                     'password',
                     message="Passwords must match"
@@ -148,7 +147,6 @@ class ChangePasswordForm(FlaskForm):
     repeat_password = PasswordField(
         'Repeat new password',
         validators=[
-            validators.DataRequired(),
             validators.EqualTo(
                 'new_password',
                 message='Passwords must match'
