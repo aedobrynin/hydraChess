@@ -267,7 +267,7 @@
 
     movesArray.push(data.san)
     pushToMovesList(data.san, moveIndx + 1)
-    moveToEnd()
+    moveToEnd(false)
     if (!clockPair.works) clockPair.start()
     else clockPair.toggle()
 
@@ -564,7 +564,7 @@
     }
   }
 
-  function moveToEnd() {
+  function moveToEnd(play_sound = true) {
     if (moveIndx !== movesArray.length - 1 && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       while (moveIndx + 1 !== movesArray.length) {
@@ -580,7 +580,9 @@
       $movesList.find(`#move_${moveIndx}`).addClass('halfmove-active')
       $movesList.scrollTop($movesList[0].scrollHeight)
 
-      moveSound.play()
+      if (play_sound) {
+        moveSound.play()
+      }
 
       removeHighlights()
       highlightLastMove()

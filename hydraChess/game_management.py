@@ -367,6 +367,9 @@ def make_draw_offer(user_id: int, game_id: int):
     '''Makes draw offer, if it's possible.'''
     game = Game.get(game_id)
 
+    if game.is_finished:
+        return
+
     with rom.util.EntityLock(game, 10, 10):
         if game.get_moves_cnt() == 0:
             #  Do not make draw offer, if game isn't started.
@@ -667,9 +670,6 @@ def search_game(user_id: int, minutes: int) -> None:
        Else it makes the game request and adds it to the database.'''
     user = User.get(user_id)
 
-    if user.cur_game_id or user.in_search:
-        return
-
     if minutes not in (1, 2, 3, 5, 10, 15, 20, 30, 60):
         return
 
@@ -736,9 +736,6 @@ def search_game(user_id: int, minutes: int) -> None:
 def cancel_search(user_id: int):
     '''Cancel game search, if it's possible'''
     user = User.get(user_id)
-
-    if not user.in_search:
-        return
 
     with rom.util.EntityLock(user, 10, 10):
         user.in_search = False
