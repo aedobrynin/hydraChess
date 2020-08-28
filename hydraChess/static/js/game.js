@@ -11,6 +11,8 @@
   var $movesList = $('#moves_list')
   var movesArray = null
   var moveIndx = null
+  // Last time we scrolled moves list to this move
+  var moveIndxLastUpdate = null
 
   var animation = false
 
@@ -251,8 +253,6 @@
     if (movesArray.length !== 0) {
       clockPair.start()
     }
-
-    updateBoardSize()
  }
 
  function onGameUpdated(data) {
@@ -435,14 +435,12 @@
 
   board = Chessboard('board', config)
 
-  $(window).on('load', function() {
-    if (localStorage.lastGameTimeValue) {
-      $('#search_game_time').val(localStorage.lastGameTimeValue)
-    }
-  })
 
   $(window).on('load', updateBoardSize)
   $(window).resize(updateBoardSize)
+
+  $(window).on('load', updateMovesListScrollLevel)
+  $(window).resize(updateMovesListScrollLevel)
 
   var href = window.location.href
   var gameId = href.slice(href.lastIndexOf('/') + 1)
@@ -488,15 +486,32 @@
     sio.emit('resign')
   })
 
+	function isVisibleInMovesList($move) {
+		var movesListTop = $movesList.offset().top
+		var movesListBottom = movesListTop + $movesList.height()
+
+		var moveTop = $move.offset().top
+		var moveBottom = moveTop + $move.height()
+
+		return movesListTop <= moveTop && moveBottom <= movesListBottom
+	}
+
   function moveBack() {
     if (moveIndx >= 0 && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       moveIndx -= 1
+      if ($movesList.css('display') !== 'none') {
+        moveIndxLastUpdate = moveIndx
+      }
       game.undo()
       board.position(game.fen())
       var $moveCell = $movesList.find(`#move_${moveIndx}`)
       $moveCell.addClass('halfmove-active')
-      $movesList.scrollTop(Math.trunc(moveIndx / 2) * $moveCell.height())
+
+      // move to the previous row, if outside the moves list
+			if (moveIndx >=0 && !isVisibleInMovesList($moveCell)) {
+        $movesList.scrollTop($movesList.scrollTop() - $moveCell.height())
+      }
 
       moveSound.play()
 
@@ -509,14 +524,18 @@
     if (moveIndx + 1 !== movesArray.length && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       moveIndx += 1
+      if ($movesList.css('display') !== 'none') {
+        moveIndxLastUpdate = moveIndx
+      }
       game.move(movesArray[moveIndx])
       board.position(game.fen())
       var $moveCell = $movesList.find(`#move_${moveIndx}`)
       $moveCell.addClass('halfmove-active')
-      $movesList.scrollTop(Math.max(
-        0,
-        Math.trunc(moveIndx / 2) - 2
-      ) * $moveCell.height())
+
+      // move to the next row, if outside the moves list
+			if (!isVisibleInMovesList($moveCell)) {
+        $movesList.scrollTop($movesList.scrollTop() + $moveCell.height())
+      }
 
       moveSound.play()
 
@@ -529,6 +548,10 @@
     if (moveIndx !== -1 && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       moveIndx = -1
+      if ($movesList.css('display') !== 'none') {
+        moveIndxLastUpdate = moveIndx
+      }
+
       game.reset()
       board.position(game.fen())
       $movesList.scrollTop(0)
@@ -546,6 +569,11 @@
         moveIndx += 1
         game.move(movesArray[moveIndx])
       }
+
+      if ($movesList.css('display') !== 'none') {
+        moveIndxLastUpdate = moveIndx
+      }
+
       board.position(game.fen())
       $movesList.find(`#move_${moveIndx}`).addClass('halfmove-active')
       $movesList.scrollTop($movesList[0].scrollHeight)
@@ -555,6 +583,34 @@
       removeHighlights()
       highlightLastMove()
     }
+  }
+
+  function updateMovesListScrollLevel() {
+    if (window.innerWidth < 1024) {
+      // The moves list is hidden
+      return
+    }
+    if (moveIndx === null || moveIndx === -1) {
+      return
+    }
+
+		var $moveCell = $movesList.find(`#move_${moveIndx}`)
+		if (isVisibleInMovesList($moveCell)) {
+			return
+		}
+
+		var row = Math.trunc(moveIndx / 2)
+
+    var resultScroll
+    if (moveIndxLastUpdate > moveIndx) {
+      resultScroll =
+        Math.min($movesList[0].scrollHeight, row * $moveCell.height())
+    } else {
+      resultScroll =
+        Math.min($movesList[0].scrollHeight, (row - 2) * $moveCell.height())
+    }
+    $movesList.scrollTop(resultScroll)
+    moveIndxLastUpdate = moveIndx
   }
 
   $(document).keydown(function(e) {
