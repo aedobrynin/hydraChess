@@ -172,6 +172,9 @@ def on_search_game(*args, **kwargs):
         print("Bad arguments")
         return
 
+    if current_user.cur_game_id or current_user.in_search:
+        return
+
     # If valid minutes value provided, create game request with it.
     # If valid game_id provided, create game request with the same game time as
     # the game.
@@ -193,13 +196,15 @@ def on_search_game(*args, **kwargs):
 @sio.on('cancel_search')
 @authenticated_only
 def on_cancel_search(*args, **kwargs):
-    game_management.cancel_search.delay(current_user.id)
+    if current_user.in_search:
+        game_management.cancel_search.delay(current_user.id)
 
 
 @sio.on('resign')
 @authenticated_only
 def on_resign(*args, **kwargs) -> None:
-    game_management.resign.delay(current_user.id, current_user.cur_game_id)
+    if current_user.cur_game_id:
+        game_management.resign.delay(current_user.id, current_user.cur_game_id)
 
 
 # TODO
@@ -263,15 +268,17 @@ def on_connect(*args, **kwargs) -> None:
 @sio.on('make_draw_offer')
 @authenticated_only
 def on_make_draw_offer(*args, **kwargs) -> None:
-    game_management.make_draw_offer.delay(current_user.id,
-                                          current_user.cur_game_id)
+    if current_user.cur_game_id:
+        game_management.make_draw_offer.delay(current_user.id,
+                                              current_user.cur_game_id)
 
 
 @sio.on('accept_draw_offer')
 @authenticated_only
 def on_accept_draw_offer(*args, **kwargs) -> None:
-    game_management.accept_draw_offer.delay(current_user.id,
-                                            current_user.cur_game_id)
+    if current_user.cur_game_id:
+        game_management.accept_draw_offer.delay(current_user.id,
+                                                current_user.cur_game_id)
 
 
 @sio.on('disconnect')
@@ -280,7 +287,7 @@ def on_disconnect(*args, **kwargs) -> None:
     if current_user.cur_game_id:
         game_management.on_disconnect.delay(current_user.id,
                                             current_user.cur_game_id)
-    else:
+    elif current_user.in_search:
         game_management.cancel_search.delay(current_user.id)
 
 
