@@ -1,34 +1,58 @@
 {% extends 'base.html' %}
 
+{% block head %}
+  <link rel="stylesheet"
+        href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN"
+        crossorigin="anonymous">
+{% endblock %}
 {% block content %}
-<body>
-  <div class="container mt-1 mb-2">
-    <div class="box">
-      <div class="columns is-mobile">
-        <div class="column is-narrow is-hidden-mobile">
-          <figure class="image is-256x256">
-            <img src="{{ url_for('static', filename='img/profiles/' + avatar_hash + '.jpg') }}"></img>
-          </figure>
-        </div>
-        <div class="column is-pulled-left">
-          <h1 class="title is-1">{{ nickname }}</h1>
-          <h2 class="subtitle is-4">Rating: {{ rating }}</h2>
-        </div>
+<div class="container mt-1 mb-2">
+  <div class="box">
+    <div class="columns is-mobile">
+      <div class="column is-narrow is-hidden-mobile">
+        <figure class="image is-256x256">
+          <img src="{{ url_for('static', filename='img/profiles/' + avatar_hash + '.jpg') }}" />
+        </figure>
+      </div>
+      <div class="column is-pulled-left">
+        <h1 class="title is-1">
+          {{ nickname }}
+          {% if is_in_game %}
+          <span style='font-size: 30px; vertical-align: middle; color: #ffbf00'>
+            <i class="fa fa-circle"
+               aria-hidden="true"
+               title='Currently in game'></i>
+          </span>
+          {% elif is_online %}
+          <span style='font-size: 30px; vertical-align: middle; color: #00d17a'>
+            <i class="fa fa-circle"
+               aria-hidden="true"
+               title='Online'></i>
+          </span>
+          {% else %}
+          <span style='font-size: 30px; vertical-align: middle;'>
+            <i class="fa fa-circle-thin"
+               aria-hidden="true"
+               title='Offline'></i>
+          </span>
+          {% endif %}
+        </h1>
+        <h2 class="subtitle is-4">Rating: {{ rating }}</h2>
       </div>
     </div>
-    <div id='games_history' class="box is-hidden">
-      <h1 class="title is-3">Latest games</h1>
-      <nav class="pagination" role="navigation" aria-label="pagination">
-        <ul class="pagination-list"></ul>
-      </nav>
-      <table class="table is-fullwidth is-hoverable">
-        <tbody id='games_container'>
-        </tbody>
-      </table>
-    </div>
   </div>
-</body>
-
+  <div id='games_history' class="box is-hidden">
+    <h1 class="title is-3">Latest games</h1>
+    <nav class="pagination" role="navigation" aria-label="pagination">
+      <ul class="pagination-list"></ul>
+    </nav>
+    <table class="table is-fullwidth is-hoverable">
+      <tbody id='games_container'>
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}

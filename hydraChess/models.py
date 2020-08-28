@@ -42,6 +42,7 @@ class User(rom.Model, UserMixin):
     in_search = rom.Boolean(default=False)
 
     sid = rom.Text()
+    last_time_sid_was_changed = rom.DateTime()
 
     avatar_hash = rom.Text(default="default")
 
