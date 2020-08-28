@@ -41,7 +41,7 @@ This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) fi
 ## Libraries used
 
 * [chess.js](https://github.com/jhlywa/chess.js) - Used to check moves and game state on client side.
-* [chessboard.js](https://github.com/hashlib/chessboardjs/) (Own fork) - Client side chess board
+* [chessboard.js](https://github.com/oakmac/chessboardjs) - Client side chess board
 * [Celery](https://github.com/celery/celery) - Used to run different tasks on server side
 * [Flask](https://github.com/pallets/flask) - Main server side framework
 * [rom](https://github.com/josiahcarlson/rom) - Redis object mapper
