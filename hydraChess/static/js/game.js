@@ -6,7 +6,7 @@
   var game = null
   var gameFinished = null
 
-  var rating
+  var rating = null
 
   var $movesList = $('#moves_list')
   var movesArray = null
@@ -24,6 +24,7 @@
   var $oppDisconnectedNotification = $('#opp_disconnected_notification')
   var oppDisconnectedTimer = new Timer('reconnect_wait_seconds')
 
+  var $buttonsContainer = $('#buttons_container')
   var $drawBtn = $('#draw_btn')
   var $resignBtn = $('#resign_btn')
 
@@ -225,7 +226,7 @@
 
       // Show draw and resign buttons.
       if (data.result === undefined) {
-        $('#buttons_container').removeClass('is-hidden')
+        $buttonsContainer.removeClass('is-hidden')
         $drawBtn.prop('accept', false)
         $drawBtn.prop('disabled', !data.can_send_draw_offer)
       }
@@ -292,12 +293,16 @@
     $('#message_input').prop('readonly', true)
     */
 
-    $('#buttons_container').addClass('is-hidden')
+    $buttonsContainer.addClass('is-hidden')
 
     clockPair.stop()
     setResults(data.result)
 
-    if (color === null) return // Do not do next things, If we are spectators.
+    if (color === null) {
+      // Do not do next things, If we are spectators.
+      return
+    }
+
     $firstMoveNotification.addClass('is-hidden')
     $firstMoveNotification.removeClass('animate__animated animate__fadeIn')
     firstMoveTimer.stop()
@@ -435,7 +440,6 @@
 
   board = Chessboard('board', config)
 
-
   $(window).on('load', updateBoardSize)
   $(window).resize(updateBoardSize)
 
@@ -465,8 +469,6 @@
   sio.on('opp_disconnected', onOppDisconnected)
   sio.on('opp_reconnected', onOppReconnected)
   sio.on('draw_offer', onDrawOffer)
-  // sio.on('draw_offer_accepted', onDrawOfferAccepted)
-  // sio.on('draw_offer_declined', onDrawOfferDeclined)
 
   /*
   $('#message_form').on('submit', function(e) {
@@ -661,18 +663,21 @@
     moveSound.play()
   })
 
-  $('#new_game_btn').on('click', function(e) {
+  var $newGameBtn = $('#new_game_btn')
+  var $stopSearchBtn = $('#stop_search_btn')
+
+  $newGameBtn.on('click', function(e) {
     e.preventDefault()
     sio.emit('search_game', {game_id: gameId})
-    $('#new_game_btn').addClass('is-hidden')
-    $('#stop_search_btn').removeClass('is-hidden')
+    $newGameBtn.addClass('is-hidden')
+    $stopSearchBtn.removeClass('is-hidden')
   })
 
-  $('#stop_search_btn').on('click', function(e) {
+  $stopSearchBtn.on('click', function(e) {
     e.preventDefault()
     sio.emit('cancel_search')
-    $('#new_game_btn').removeClass('is-hidden')
-    $('#stop_search_btn').addClass('is-hidden')
+    $newGameBtn.removeClass('is-hidden')
+    $stopSearchBtn.addClass('is-hidden')
   })
 
 
@@ -687,7 +692,7 @@
       110
     )
     // Stop search, if modal is closed.
-    if ($('#stop_game_btn').css('display') !== 'none') {
+    if ($stopSearchBtn.hasClass('is-hidden')) {
       sio.emit('cancel_search')
     }
   })
