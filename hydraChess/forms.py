@@ -56,6 +56,7 @@ def password_content_validator(form, field):
             message="Password can't be longer than 127 characters"
         )
 
+
 def image_content_validator(form, field):
     image = field.data
     raw_img = BytesIO(image.read())

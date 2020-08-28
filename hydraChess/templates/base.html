@@ -1,68 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/bulma.css') }}" />
-    <title>{{ title }}</title>
-  </head>
-  <nav class="navbar has-shadow" role="navigation" aria-label="main navigation">
-		<div class="container">
-			<div class="navbar-brand">
-				<a class="navbar-item is-size-5" href="/">
-          <b>Hydra Chess</b>
-				</a>
-        <a id='navbar-toggle' role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bulma.css') }}" />
+  <title>{{ title }}</title>
+  {% block head %}
+  {% endblock %}
+</head>
+<nav class="navbar has-shadow" role="navigation" aria-label="main navigation">
+  <div class="container">
+    <div class="navbar-brand">
+      <a class="navbar-item is-size-5" href="/">
+        <b>Hydra Chess</b>
+      </a>
+      <a id='navbar-toggle' role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </a>
+    </div>
+    {% if current_user.is_authenticated %}
+    <div class='navbar-menu navbar-end'>
+      <div class='navbar-item has-dropdown is-hoverable'>
+        <a class='navbar-link is-arrowless'>
+          {{ current_user.login }}
         </a>
-			</div>
-      {% if current_user.is_authenticated %}
-        <div class='navbar-menu navbar-end'>
-          <div class='navbar-item has-dropdown is-hoverable'>
-            <a class='navbar-link is-arrowless'>
-              {{ current_user.login }}
-            </a>
-            <div class='navbar-dropdown is-right'>
-              <a href='/user/{{ current_user.login }}' class='navbar-item'>
-                Profile
-              </a>
-              <a href='/settings' class='navbar-item'>
-                Settings
-              </a>
-              <a href='/logout' class='navbar-item'>
-                Logout
-              </a>
-            </div>
-          </div>
+        <div class='navbar-dropdown is-right'>
+          <a href='/user/{{ current_user.login }}' class='navbar-item'>
+            Profile
+          </a>
+          <a href='/settings' class='navbar-item'>
+            Settings
+          </a>
+          <a href='/logout' class='navbar-item'>
+            Logout
+          </a>
         </div>
-      {% else %}
-        <div class="navbar-menu navbar-end">
-          <div class="buttons">
-						<a href='/sign_up' class="button is-primary">
-							<strong>Sign up</strong>
-						</a>
-						<a href='/sign_in' class="button is-light">
-							Log in
-						</a>
-					</div>
-				</div>
-      {% endif %}
-		</div>
-	</nav>
-  {% block content %}{% endblock %}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
-					integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
-					crossorigin="anonymous"></script>
-	<script>
-		$('#navbar-toggle').click(
-			function() {
-				$(this).toggleClass('is-active')
-				$('.navbar-menu').toggleClass('is-active')
-        $('.navbar-menu').find('.button').toggleClass('is-fullwidth mx-3')
-			}
-		)
-	</script>
-  {% block extra_scripts %}{% endblock %}
+      </div>
+    </div>
+    {% else %}
+    <div class="navbar-menu navbar-end">
+      <div class="buttons">
+        <a href='/sign_up' class="button is-primary">
+          <strong>Sign up</strong>
+        </a>
+        <a href='/sign_in' class="button is-light">
+          Log in
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</nav>
+<body>
+{% block content %}{% endblock %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+        crossorigin="anonymous"></script>
+<script>
+  $('#navbar-toggle').click(
+    function() {
+      $(this).toggleClass('is-active')
+      $('.navbar-menu').toggleClass('is-active')
+      $('.navbar-menu').find('.button').toggleClass('is-fullwidth mx-3')
+    }
+  )
+</script>
+{% block extra_scripts %}{% endblock %}
+</body>
 </html>

@@ -20,6 +20,7 @@ monkey.patch_all()
 
 import os
 import uuid
+from datetime import datetime, timedelta
 from io import BytesIO
 from PIL import Image
 from flask import Flask, request, url_for
@@ -143,11 +144,25 @@ def user_profile(nickname: str):
     user = User.get_by(login=nickname)
     if not user:
         return render_template('404.html'), 404
-    return render_template('user_profile.html',
-                           title=f"{user.login}'s profile - Hydra Chess",
-                           nickname=user.login,
-                           rating=user.rating,
-                           avatar_hash=user.avatar_hash)
+
+    is_in_game = user.cur_game_id is not None
+    is_online: bool
+
+    if user.last_time_sid_was_changed:
+        time_passed = datetime.utcnow() - user.last_time_sid_was_changed
+        is_online = time_passed < timedelta(minutes=5)
+    else:
+        is_online = False
+
+    return render_template(
+        'user_profile.html',
+        title=f"{user.login}'s profile - Hydra Chess",
+        nickname=user.login,
+        rating=user.rating,
+        avatar_hash=user.avatar_hash,
+        is_in_game=is_in_game,
+        is_online=is_online
+    )
 
 
 @sio.on('search_game')
@@ -169,7 +184,7 @@ def on_search_game(*args, **kwargs):
         if not game:
             return
         minutes = game.total_clock.total_seconds() // 60
-    elif type(minutes) != int:
+    elif not isinstance(minutes, int):
         return
 
     game_management.search_game.delay(current_user.id, minutes)
@@ -215,6 +230,7 @@ def on_connect(*args, **kwargs) -> None:
         cur_user = User.get(current_user.id)
         with EntityLock(cur_user, 10, 10):
             cur_user.sid = request.sid
+            cur_user.last_time_sid_was_changed = datetime.utcnow()
             cur_user.save()
 
     if request_type == 'lobby' or request_type != 'game':
@@ -287,8 +303,10 @@ def on_make_move(*args, **kwargs):
 def settings():
     change_password_form = ChangePasswordForm()
 
-    if change_password_form.submit_password.data and change_password_form.validate():
-        if current_user.check_password(change_password_form.current_password.data):
+    if change_password_form.submit_password.data and\
+            change_password_form.validate():
+        if current_user.check_password(
+                change_password_form.current_password.data):
             current_user.set_password(change_password_form.new_password.data)
             current_user.save()
             change_password_form.message = \
@@ -299,7 +317,8 @@ def settings():
 
     picture_form = PictureForm()
     if picture_form.submit_picture.data and picture_form.validate():
-        picture_form.image.data.seek(0)  # Because the stream was already read on validation
+        # Because the stream was already read on validation
+        picture_form.image.data.seek(0)
         raw_img = BytesIO(picture_form.image.data.read())
 
         img = Image.open(raw_img)
@@ -327,10 +346,10 @@ def settings():
         picture_form.message = "Your profile pucture was successfuly updated!"
 
     return render_template(
-            'settings.html',
-            title='Settings - Hydra Chess',
-            change_password_form=change_password_form,
-            picture_form=picture_form
+        'settings.html',
+        title='Settings - Hydra Chess',
+        change_password_form=change_password_form,
+        picture_form=picture_form
     )
 
 
