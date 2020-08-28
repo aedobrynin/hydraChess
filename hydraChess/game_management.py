@@ -63,7 +63,6 @@ def send_game_info(game_id: int, room_id: int, is_player: bool):
         data["black_clock"] = int(black_clock.total_seconds())
         data["white_clock"] = int(white_clock.total_seconds())
         if is_player:
-            rating_changes = get_rating_changes(game_id)
             if game.draw_offer_sender is None and game.get_moves_cnt() != 0:
                 data["can_send_draw_offer"] = True
             else:
@@ -241,7 +240,7 @@ def resign(user_id: int, game_id: int) -> None:
 
 
 @celery.task(name="reconnect", ignore_result=True)
-def reconnect(user_id: int, game_id: int) -> None:
+def on_reconnect(user_id: int, game_id: int) -> None:
     '''Sends game info to reconnected player
     Emits 'opp_reconnected' to the opponent.'''
 
@@ -252,16 +251,33 @@ def reconnect(user_id: int, game_id: int) -> None:
     is_user_white = user_id == game.white_user.id
 
     if is_user_white:
-        # Not ".delay()", because of bad emition order
-        send_game_info(game_id, game.white_user.sid, True)
+        send_game_info.delay(game_id, game.white_user.sid, True)
+
         if game.white_disconnect_timed_out_task_id:
             revoke(game.white_disconnect_timed_out_task_id)
             with rom.util.EntityLock(game, 10, 10):
                 game.white_disconnect_timed_out_task_id = None
                 game.save()
 
-        sio.emit('opp_reconnected', room=game.black_user.sid)
+        if game.first_move_timed_out_task_id and next_to_move == chess.WHITE:
+            wait_time = (game.first_move_timed_out_task_eta -
+                         datetime.utcnow()).seconds
+            sio.emit(
+                'first_move_waiting',
+                {'wait_time': wait_time},
+                room=game.white_user.sid,
+            )
 
+        if game.black_disconnect_timed_out_task_id:
+            wait_time = (game.black_disconnect_timed_out_task_eta -
+                         datetime.utcnow()).seconds
+            sio.emit(
+                'opp_disconnected',
+                {'wait_time': wait_time},
+                room=game.white_user.sid,
+            )
+
+        sio.emit('opp_reconnected', room=game.black_user.sid)
     else:
         send_game_info.delay(game_id, game.black_user.sid, True)
 
@@ -271,37 +287,16 @@ def reconnect(user_id: int, game_id: int) -> None:
                 game.black_disconnect_timed_out_task_id = None
                 game.save()
 
-        sio.emit('opp_reconnected', room=game.white_user.sid)
-
-        if is_user_white:
-            if game.first_move_timed_out_task_id and\
-                    next_to_move == chess.WHITE:
-                wait_time = (game.first_move_timed_out_task_eta -
-                             datetime.utcnow()).seconds
-                sio.emit(
-                    'first_move_waiting',
-                    {'wait_time': wait_time},
-                    room=game.white_user.sid,
-                )
-            elif game.first_move_timed_out_task_id and\
-                    next_to_move == chess.BLACK:
-                wait_time = (game.first_move_timed_out_task_eta -
-                             datetime.utcnow()).seconds
-                sio.emit(
-                    'first_move_waiting',
-                    {'wait_time': wait_time},
-                    room=game.black_user.sid,
-                )
-
-        if is_user_white and game.black_disconnect_timed_out_task_id:
-            wait_time = (game.black_disconnect_timed_out_task_eta -
+        if game.first_move_timed_out_task_id and next_to_move == chess.BLACK:
+            wait_time = (game.first_move_timed_out_task_eta -
                          datetime.utcnow()).seconds
             sio.emit(
-                'opp_disconnected',
+                'first_move_waiting',
                 {'wait_time': wait_time},
-                room=game.white_user.sid,
+                room=game.black_user.sid,
             )
-        elif not is_user_white and game.white_disconnect_timed_out_task_id:
+
+        if game.white_disconnect_timed_out_task_id:
             wait_time = (game.white_disconnect_timed_out_task_eta -
                          datetime.utcnow()).seconds
             sio.emit(
@@ -310,23 +305,22 @@ def reconnect(user_id: int, game_id: int) -> None:
                 room=game.black_user.sid,
             )
 
+        sio.emit('opp_reconnected', room=game.white_user.sid)
+
 
 @celery.task(name="on_disconnect", ignore_result=True)
 def on_disconnect(user_id: int, game_id: int) -> None:
     '''Schedules on_disconnect_timed_out_task, adds it to database.
        Emits 'opp_disconnected' to the opponent'''
 
-    eta = datetime.utcnow() + timedelta(seconds=DISCONNECT_TIME_OUT)
-    task = on_disconnect_timed_out.apply_async(
-        args=(user_id, game_id),
-        eta=eta,
-    )
+    request_time = datetime.utcnow()
 
     game = Game.get(game_id)
 
     if not game or\
             game.is_finished or\
-            user_id not in (game.white_user.id, game.black_user.id):
+            user_id not in (game.white_user.id, game.black_user.id) or\
+            game.get_moves_cnt() == 0:
         return
 
     if game.draw_offer_sender:
@@ -336,8 +330,19 @@ def on_disconnect(user_id: int, game_id: int) -> None:
 
     is_user_white = user_id == game.white_user.id
 
+    if is_user_white and game.white_disconnect_timed_out_task_id:
+        return
+    if not is_user_white and game.black_disconnect_timed_out_task_id:
+        return
+
     opp_sid: Optional[int]
     with rom.util.EntityLock(game, 10, 10):
+        eta = request_time + timedelta(seconds=DISCONNECT_TIME_OUT)
+        task = on_disconnect_timed_out.apply_async(
+            args=(user_id, game_id),
+            eta=eta,
+        )
+
         if is_user_white:
             game.white_disconnect_timed_out_task_id = task.id
             game.white_disconnect_timed_out_task_eta = eta
@@ -550,7 +555,7 @@ def on_disconnect_timed_out(user_id: int, game_id: int) -> None:
         result = "1-0"
         reason = "Black player disconnected. White won."
 
-    end_game(game_id, result, reason)
+    end_game.delay(game_id, result, reason)
 
 
 @celery.task(name="on_time_is_up", ignore_results=True)

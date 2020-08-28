@@ -92,7 +92,7 @@ def game_page(game_id: int):
         return render_template('404.html'), 404
     return render_template('game.html', title='Game - Hydra Chess')
 
-  
+
 @app.route('/sign_up', methods=['GET', 'POST'])
 def sign_up():
     if current_user.is_authenticated:
@@ -236,7 +236,7 @@ def on_connect(*args, **kwargs) -> None:
 
     if current_user.is_authenticated:
         if current_user.id in (game.white_user.id, game.black_user.id):
-            game_management.reconnect.delay(current_user.id, game_id)
+            game_management.on_reconnect.delay(current_user.id, game_id)
             return
 
     game_management.send_game_info.delay(game_id, request.sid, False)
