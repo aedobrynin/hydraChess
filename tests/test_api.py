@@ -68,7 +68,6 @@ class TestGamesApi(unittest.TestCase):
             app.config['HOST'] + 'sign_up',
             data=self.user_data,
         )
-        self.session.close()
 
         self.assertIn('lobby', resp.url)
 
@@ -362,7 +361,6 @@ class TestGamesApi(unittest.TestCase):
         url = app.config['HOST'] + 'api/v1.x/game'
         resp = self.session.get(url, data={'id': game_id})
         actual_json = resp.json()
-        self.session.close()
 
         expected_json = {
             "game": {
@@ -382,6 +380,9 @@ class TestGamesApi(unittest.TestCase):
 
         self.assertEqual(actual_json, expected_json)
         self.assertEqual(resp.status_code, 200)
+
+    def tearDown(self):
+        self.session.close()
 
     @classmethod
     def tearDownClass(cls):

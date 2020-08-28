@@ -29,6 +29,7 @@ import rom.util
 from flask_socketio import SocketIO
 from hydraChess.config import TestingConfig
 from hydraChess.__main__ import app
+from hydraChess.models import User
 
 
 class TestRegister(unittest.TestCase):
@@ -221,6 +222,129 @@ class TestLogin(unittest.TestCase):
         data = self.user_data.copy()
         resp = requests.post(self.url, data=data)
         self.assertIn('lobby', resp.url)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.process.terminate()
+
+
+class TestChangePassword(unittest.TestCase):
+    process = None
+    @classmethod
+    def setUpClass(cls):
+        app.config.from_object(TestingConfig)
+
+        rom.util.set_connection_settings(db=app.config['REDIS_DB_ID'])
+        rom.util.use_null_session()
+
+        sio = SocketIO(app, messages_queue=app.config['SOCKET_IO_URL'])
+
+        cls.process = Process(
+            target=sio.run,
+            args=(app,),
+            kwargs={
+                'port': app.config['PORT'],
+                'debug': True,
+                'use_reloader': False
+            }
+        )
+        cls.process.start()
+        sleep(3)
+
+    def setUp(self):
+        self.url = app.config['HOST'] + 'settings'
+        self.user_data = {
+            'login': uuid4().hex[:10],
+            'password': 'testtesttest',
+            'submit': 'Sign+in'
+        }
+
+        data = self.user_data.copy()
+        data['submit'] = 'Register'
+        data['confirm_password'] = data['password']
+        self.session = requests.Session()
+        resp = self.session.post(app.config['HOST'] + 'sign_up', data=data)
+        self.assertIn('lobby', resp.url)
+
+        password = uuid4().hex[:20]
+        self.request_data = {
+            'new_password': password,
+            'repeat_password': password,
+            'current_password': self.user_data['password'],
+            'submit_password': 'Update+password'
+        }
+
+    def test_empty_new_password(self):
+        data = self.request_data.copy()
+        data['new_password'] = ''
+        resp = self.session.post(self.url, data=data)
+        self.assertIn(
+            'This field is required',
+            unescape(resp.text)
+        )
+
+    def test_too_short_password(self):
+        for password_len in range(1, 8):
+            data = self.request_data.copy()
+            data['new_password'] = 'a' * password_len
+            resp = self.session.post(self.url, data=data)
+            self.assertIn(
+                "Password can't be shorter than 8 characters",
+                unescape(resp.text)
+            )
+
+    def test_too_long_password(self):
+        for password_len in range(128, 135):
+            data = self.request_data.copy()
+            data['new_password'] = 'a' * password_len
+            resp = self.session.post(self.url, data=data)
+            self.assertIn(
+                "Password can't be longer than 127 characters",
+                unescape(resp.text)
+            )
+
+    def test_password_do_not_match(self):
+        data = self.request_data.copy()
+        data['repeat_password'] = 'a' * 10
+        resp = self.session.post(self.url, data=data)
+        self.assertIn(
+            'Passwords must match',
+            unescape(resp.text)
+        )
+
+    def test_bad_char_in_password(self):
+        data = self.request_data.copy()
+        for bad_char in "   \"\\'ἱερογλύφος測試":
+            data['new_password'] =\
+                data['repeat__password'] = 'a' * 10 + bad_char
+            resp = self.session.post(self.url, data=data)
+            self.assertIn(
+                "Only letters, digits and symbols are allowed",
+                unescape(resp.text)
+            )
+
+    def test_bad_current_password(self):
+        data = self.request_data.copy()
+        data['current_password'] = 'a' * 10
+        resp = self.session.post(self.url, data=data)
+        self.assertIn(
+            'Wrong current password',
+            unescape(resp.text)
+        )
+
+    def test_new_password_value(self):
+        data = self.request_data.copy()
+        resp = self.session.post(self.url, data=data)
+        self.assertIn(
+            'Your password was successfuly updated!',
+            unescape(resp.text)
+        )
+
+        user = User.get_by(login=self.user_data['login'])
+        self.assertTrue(user.check_password(data['new_password']))
+
+    def tearDown(self):
+        self.session.close()
 
     @classmethod
     def tearDownClass(cls):

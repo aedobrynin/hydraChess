@@ -46,6 +46,15 @@ def password_content_validator(form, field):
         raise StopValidation(message=("Only letters, digits and "
                                       "symbols are allowed"))
 
+    if len(password) < 8:
+        raise StopValidation(
+            message="Password can't be shorter than 8 characters"
+        )
+
+    if len(password) > 127:
+        raise StopValidation(
+            message="Password can't be longer than 127 characters"
+        )
 
 def image_content_validator(form, field):
     image = field.data
@@ -59,59 +68,95 @@ def image_content_validator(form, field):
 
 class SignUpForm(FlaskForm):
     login = \
-        StringField('Nickname',
-                    validators=[validators.DataRequired(),
-                                login_content_validator,
-                                validators.Length(min=3,
-                                                  message=("Nickname can't be "
-                                                           "shorter than "
-                                                           "%(min)d "
-                                                           "characters")),
-                                validators.Length(max=20,
-                                                  message=("Nickname can't be "
-                                                           "longer than "
-                                                           "%(max)d "
-                                                           "characters"))])
+        StringField(
+            'Nickname',
+            validators=[
+                validators.DataRequired(),
+                login_content_validator,
+                validators.Length(
+                    min=3,
+                    message="Nickname can't be shorter than %(min)d characters"
+                ),
+                validators.Length(
+                    max=20,
+                    message="Nickname can't be longer than %(max)d characters"
+                )
+            ]
+        )
 
     password = \
-        PasswordField('Password',
-                      validators=[validators.DataRequired(),
-                                  validators.Length(min=8,
-                                                    message=("Password can't "
-                                                             "be shorter than "
-                                                             "%(min)d "
-                                                             "characters")),
-                                  validators.Length(max=127,
-                                                    message=("Password can't "
-                                                             "be longer than "
-                                                             "%(max)d "
-                                                             "characters")),
-                                  password_content_validator])
+        PasswordField(
+            'Password',
+            validators=[
+                validators.DataRequired(),
+                password_content_validator
+            ]
+        )
 
     confirm_password = \
-        PasswordField('Confirm password',
-                      validators=[validators.DataRequired(),
-                                  validators.EqualTo('password',
-                                                     message=("Passwords must "
-                                                              "match"))])
+        PasswordField(
+            'Confirm password',
+            validators=[
+                validators.EqualTo(
+                    'password',
+                    message="Passwords must match"
+                )
+            ]
+        )
 
     submit = SubmitField('Register')
 
 
 class LoginForm(FlaskForm):
     login = StringField('Nickname', validators=[validators.DataRequired()])
-    password = PasswordField('Password',
-                             validators=[validators.DataRequired()])
+    password = PasswordField(
+        'Password',
+        validators=[validators.DataRequired()]
+    )
 
     remember_me = BooleanField('Remember me')
     submit = SubmitField('Sign in')
 
 
-class SettingsForm(FlaskForm):
-    image = FileField('Profile picture',
-                      validators=[FileRequired(),
-                                  FileAllowed(['jpg', 'png', 'jpeg'],
-                                              ('Only .png, .jpg, .jpeg '
-                                               ' images are allowed')),
-                                  image_content_validator])
-    submit = SubmitField('Update settings')
+class PictureForm(FlaskForm):
+    image = \
+        FileField(
+            'Profile picture',
+            validators=[
+                FileRequired(),
+                FileAllowed(
+                    ['jpg', 'png', 'jpeg'],
+                    'Only .png, .jpg, .jpeg images are allowed'
+                ),
+                image_content_validator
+            ]
+        )
+
+    submit_picture = SubmitField('Update profile picture')
+
+
+class ChangePasswordForm(FlaskForm):
+    new_password = PasswordField(
+        'New password',
+        validators=[
+            validators.DataRequired(),
+            password_content_validator
+        ]
+    )
+
+    repeat_password = PasswordField(
+        'Repeat new password',
+        validators=[
+            validators.EqualTo(
+                'new_password',
+                message='Passwords must match'
+            )
+        ]
+    )
+
+    current_password = PasswordField(
+        'Current password',
+        validators=[validators.DataRequired()]
+    )
+
+    submit_password = SubmitField('Update password')

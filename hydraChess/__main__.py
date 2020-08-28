@@ -32,7 +32,8 @@ from flask_login import current_user, login_required
 from flask_restful import Api
 import sass
 from hydraChess.config import ProductionConfig
-from hydraChess.forms import SignUpForm, LoginForm, SettingsForm
+from hydraChess.forms import SignUpForm, LoginForm, PictureForm
+from hydraChess.forms import ChangePasswordForm
 from hydraChess.models import User, Game
 from hydraChess.resources import GamesPlayed, GamesList, GameResource
 
@@ -284,12 +285,22 @@ def on_make_move(*args, **kwargs):
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    form = SettingsForm()
+    change_password_form = ChangePasswordForm()
 
-    message = ""
-    if form.validate_on_submit():
-        form.image.data.seek(0)  # Because the stream was already read on validation
-        raw_img = BytesIO(form.image.data.read())
+    if change_password_form.submit_password.data and change_password_form.validate():
+        if current_user.check_password(change_password_form.current_password.data):
+            current_user.set_password(change_password_form.new_password.data)
+            current_user.save()
+            change_password_form.message = \
+                'Your password was successfuly updated!'
+        else:
+            change_password_form.message = \
+                'Wrong current password'
+
+    picture_form = PictureForm()
+    if picture_form.submit_picture.data and picture_form.validate():
+        picture_form.image.data.seek(0)  # Because the stream was already read on validation
+        raw_img = BytesIO(picture_form.image.data.read())
 
         img = Image.open(raw_img)
         img_new_side = min(img.width // 256, img.height // 256) * 256
@@ -313,10 +324,14 @@ def settings():
 
         current_user.avatar_hash = img_hash
         current_user.save()
-        message = "Your settings were successfuly updated!"
+        picture_form.message = "Your profile pucture was successfuly updated!"
 
-    return render_template('settings.html', title='Settings - Hydra Chess',
-                           form=form, message=message)
+    return render_template(
+            'settings.html',
+            title='Settings - Hydra Chess',
+            change_password_form=change_password_form,
+            picture_form=picture_form
+    )
 
 
 @app.route('/logout')

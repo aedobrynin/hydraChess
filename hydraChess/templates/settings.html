@@ -1,41 +1,121 @@
 {% extends "base.html" %}
 
 {% block content %}
-{% set error_shown = False %}
+{% set change_password_form_error_shown = False %}
+{% set picture_form_error_shown = False %}
 <body>
   <div class="container">
-    <div class="columns is-centered pt-1">
+    <div class="columns is-centered mt-1">
       <div class="column is-one-third">
         <div class="box">
-          <h1 class="title">Settings</h1>
+          <h1 class='title'>Password</h1>
+          <form method="post">
+            {{ change_password_form.csrf_token }}
+            <div class="field">
+              <label class='label'>
+                {{ change_password_form.new_password.label }}
+              </label>
+              <div class='control'>
+                {{ change_password_form.new_password(
+                  class='input',
+                  type='password',
+                  placeholder='Your new password here')
+                }}
+                {% if change_password_form.new_password.errors and
+                    not change_password_form_error_shown %}
+                  <p class='help is-danger'>
+                    {{ change_password_form.new_password.errors[0] }}
+                  </p>
+                  {% set change_password_form_error_shown = True %}
+                {% endif %}
+              </div>
+            </div>
+            <div class="field">
+              <label class='label'>
+                {{ change_password_form.repeat_password.label }}
+              </label>
+              <div class='control'>
+                {{ change_password_form.repeat_password(
+                  class='input',
+                  type='password',
+                  placeholder='Repeat new password')
+                }}
+                {% if change_password_form.repeat_password.errors and
+                    not change_password_form_error_shown %}
+                  <p class='help is-danger'>
+                    {{ change_password_form.repeat_password.errors[0] }}
+                  </p>
+                  {% set change_password_form_error_shown = True %}
+                {% endif %}
+              </div>
+            </div>
+            <div class="field">
+              <label class='label'>
+                {{ change_password_form.current_password.label }}
+              </label>
+              <div class='control'>
+                {{ change_password_form.current_password(
+                  class='input',
+                  type='password',
+                  placeholder='Your current password here')
+                }}
+                {% if change_password_form.current_password.errors and
+                    not change_password_form_error_shown %}
+                  <p class='help is-danger'>
+                    {{ change_password_form.current_password.errors[0] }}
+                  </p>
+                  {% set change_password_form_error_shown = True %}
+                {% endif %}
+              </div>
+            </div>
+            <div class='field'>
+              <div class='control'>
+                {{ change_password_form.submit_password(
+                    class='button is-link is-fullwidth',
+                    type='submit'
+                   )
+                }}
+              {% if change_password_form.message %}
+                <p class='help is-success'>
+                  {{ change_password_form.message }}
+                </p>
+              {% endif %}
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class='box'>
+          <h1 class='title'>Profile picture</h1>
           <form method="post" enctype="multipart/form-data">
-            {{ form.csrf_token }}
-
+            {{ picture_form.csrf_token }}
 						<div class="field">
 							<div class="file has-name is-fullwidth">
 								<label class="file-label">
-									{{ form.image(class="file-input", type="file") }}
+									{{ picture_form.image(class="file-input", type="file") }}
 									<span class="file-cta">
 										<span class="file-label">
-											{{ form.image.label }}
+											{{ picture_form.image.label }}
 										</span>
 									</span>
 									<span class="file-name"></span>
 								</label>
 							</div>
-							{% if form.image.errors and not error_shown %}
-								<p class="help is-danger">{{ form.image.errors[0] }}</p>
-								{% set error_shown = True %}
+							{% if picture_form.image.errors and not picture_form_error_shown %}
+								<p class="help is-danger">{{ picture_form.image.errors[0] }}</p>
+								{% set picture_form_error_shown = True %}
 							{% endif %}
 						</div>
             <div class="field">
               <div class="control">
-                {{ form.submit(
+                {{ picture_form.submit_picture(
                     class="button is-link is-fullwidth",
                     type="submit"
                    )
                 }}
               </div>
+              {% if picture_form.message %}
+                <p class='help is-success'>{{ picture_form.message }}</p>
+              {% endif %}
             </div>
           </form>
         </div>
@@ -43,36 +123,6 @@
     </div>
   </div>
 </body>
-<!--
-<form class="basic-form mt-2" method="POST" enctype="multipart/form-data">
-  {{ form.csrf_token }}
-
-  <div class="form-group">
-    {{ form.image.label }}<br>
-    <div class="input-group">
-      <div class="custom-file">
-        <input type="file" name="image" class="custom-file-input" id="image">
-          <label class="custom-file-label" for="inputGroupFile01">Choose file</label>
-      </div>
-    </div>
-
-    {% if form.image.errors %}
-    <div class="m-0 p-0 mb-2 error-message">
-      {{ form.image.errors[0] }}
-    </div>
-    {% endif %}
-  </div>
-  {{ form.submit(type="submit", class="btn w-100 submit-button") }}
-
-  {% if message %}
-    <div class="alert alert-success mt-2 mb-1" role="alert">
-      {{ message }}
-    </div>
-  {% endif %}
-
-</form>
-!-->
-
 {% endblock %}
 
 {% block extra_scripts %}
