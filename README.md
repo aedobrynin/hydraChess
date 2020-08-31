@@ -8,14 +8,14 @@ Tested on Python 3.7+ (PyPy 7.3.1+) and Redis 5.0.5
 
 1. Create new Python venv and install requirements.
 ```
-$ python3 -mvenv dev
-$ source dev/bin/activate
-$ pip3 install -r requirements.txt
+python3 -mvenv dev
+source dev/bin/activate
+pip3 install -r requirements.txt
 ```
 
 2. Install Redis
 ```
-$ sudo apt install redis
+sudo apt install redis
 ```
 
 ## Running
