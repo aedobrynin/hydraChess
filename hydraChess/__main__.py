@@ -297,7 +297,7 @@ def on_make_move(*args, **kwargs):
     if args and isinstance(args[0], dict):
         user_id = current_user.id
         san = args[0].get('san')
-        game_id = args[0].get('game_id')
+        game_id = str(args[0].get('game_id'))
         if not game_id.isdigit():
             return
         game_id = int(game_id)
