@@ -1,0 +1,11 @@
+-- MAKE_MOVE STATS --
+Total tasks: 4192
+Succeded tasks: 4192 (100.0%)
+Failed tasks: 0 (0.0%)
+Min lifetime: 0.0031
+Max lifetime: 0.0492
+25-th percentile: 0.0135
+50-th percentile: 0.0155
+75-th percentile: 0.0189
+90-th percentile: 0.0233
+----------------------
