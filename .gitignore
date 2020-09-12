@@ -5,6 +5,8 @@ dev_pypy/*
 hydraChess/static/img/profiles/*
 !hydraChess/static/img/profiles/default.jpg
 hydraChess/ngrok
+load_testing/test/*
+load_testing/stats.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
