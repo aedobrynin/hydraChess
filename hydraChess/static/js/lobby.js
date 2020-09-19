@@ -1,3 +1,5 @@
+import { showLoggedTwiceModal } from './logged_twice.js'
+
 ;(function() {
   var timeData = [
     {name: '1 minute', minutes: 1},
@@ -8,7 +10,7 @@
     {name: '15 minutes', minutes: 15},
     {name: '20 minutes', minutes: 20},
     {name: '30 minutes', minutes: 30},
-    {name: '1 hour', minutes: 60},
+    {name: '1 hour', minutes: 60}
   ]
 
   var $select = $('#mobile_time_select')
@@ -38,12 +40,11 @@
   sio.on('redirect', function(data) {
     window.location.href = data.url
   })
-
+  sio.on('logged_twice', showLoggedTwiceModal)
 
   $('body').on('click', 'button[minutes]', function() {
     searchGame(parseInt($(this).attr('minutes')))
   })
-
 
   $('#start_searching').on('click', function() {
     searchGame(parseInt($select.val()))
@@ -62,7 +63,6 @@
       function() {
         $modal
           .removeClass('animate__animated animate__fadeOut animate__fadeIn is-active')
-
         },
       110
     )
