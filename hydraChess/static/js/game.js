@@ -541,7 +541,7 @@ import { Timer, ClockPair } from './clock.js'
     }
   }
 
-  function moveToEnd(playSound = true) {
+  function moveToEnd(playSound=true) {
     if (moveIndx !== movesArray.length - 1 && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       while (moveIndx + 1 !== movesArray.length) {
