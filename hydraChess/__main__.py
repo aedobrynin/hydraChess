@@ -224,6 +224,14 @@ def on_connect(*args, **kwargs) -> None:
             cur_user.save()
 
     if request_type == 'lobby':
+        if not current_user.is_authenticated:
+            return
+        if current_user.cur_game_id:
+            sio.emit(
+                'redirect',
+                {'url': f'/game/{current_user.cur_game_id}'},
+                room=request.sid
+            )
         return
 
     game_id = request.args.get('game_id')
