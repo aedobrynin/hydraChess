@@ -3,7 +3,7 @@ function addLeadingZero(value) {
   return value.toString()
 }
 
-class Clock {
+export class Clock {
   constructor(domId, seconds = 0) {
     this.domId = domId
     this.work = false
@@ -65,13 +65,13 @@ class Clock {
   }
 }
 
-class Timer extends Clock {
+export class Timer extends Clock {
   redraw() {
     document.getElementById(this.domId).innerHTML = this.seconds
   }
 }
 
-class ClockPair {
+export class ClockPair {
   constructor(domIds, seconds = 0) {
     if (!Array.isArray(domIds) || domIds.length !== 2) {
       alert('Bad domIds for ClockPair instance')

@@ -207,38 +207,23 @@ def on_resign(*args, **kwargs) -> None:
         game_management.resign.delay(current_user.id, current_user.cur_game_id)
 
 
-# TODO
-"""
-@sio.on('send_message')
-@authenticated_only
-def on_send_message(*args, **kwargs) -> None:
-    if not current_user.cur_game_id:
-        return
-
-    if args and isinstance(args[0], dict):
-        message = args[0].get('message', "").strip()[:70]
-        if message:
-            game_management.send_message.delay(current_user.cur_game_id,
-                                               sender=current_user.login,
-                                               message=message)
-"""
-
-
 @sio.on('connect')
 def on_connect(*args, **kwargs) -> None:
     request_type = request.args.get('request_type')
-    if not request_type:
+    if request_type not in ('lobby', 'game'):
         disconnect()
         return
 
     if current_user.is_authenticated:
         cur_user = User.get(current_user.id)
+        if cur_user.sid:
+            sio.emit('logged_twice', room=cur_user.sid)
         with EntityLock(cur_user, 10, 10):
             cur_user.sid = request.sid
             cur_user.last_time_sid_was_changed = datetime.utcnow()
             cur_user.save()
 
-    if request_type == 'lobby' or request_type != 'game':
+    if request_type == 'lobby':
         return
 
     game_id = request.args.get('game_id')
@@ -284,6 +269,9 @@ def on_accept_draw_offer(*args, **kwargs) -> None:
 @sio.on('disconnect')
 @authenticated_only
 def on_disconnect(*args, **kwargs) -> None:
+    if current_user.sid != request.sid:
+        return
+
     if current_user.cur_game_id:
         game_management.on_disconnect.delay(current_user.id,
                                             current_user.cur_game_id)

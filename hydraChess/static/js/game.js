@@ -1,3 +1,6 @@
+import { showLoggedTwiceModal } from './logged_twice.js'
+import { Timer, ClockPair } from './clock.js'
+
 ;(function() {
   var board = null
   var $board = $('#board')
@@ -102,20 +105,6 @@
       $('#info_b').append(` <b>(${blackResult})</b>`)
     }
   }
-
-  /* -- CHAT RELATED FUNCTIONS -- */
-
-  /*
-  function sendMessage() {
-    var message = $('#message_input').val().trim()
-    $('#message_input').val('')
-    if (message === '') return
-
-    sio.emit('send_message', {'message': message})
-  }
-  */
-
-  /* -- CHAT RELATED FUNCTIONS -- */
 
   /* -- HIGHLIGHTS RELATED FUNCTIONS -- */
   function removeHighlights() {
@@ -289,10 +278,6 @@
   }
 
   function onGameEnded(data) {
-    /*
-    $('#message_input').prop('readonly', true)
-    */
-
     $buttonsContainer.addClass('is-hidden')
 
     clockPair.stop()
@@ -411,8 +396,6 @@
     $board.height(containerSize)
     board.resize()
     highlightLastMove()
-
-    var boardPos = $board.position()
   }
 
   // should be called before EVERY animation
@@ -464,18 +447,12 @@
   sio.on('redirect', function(data) {
     window.location.href = data.url
   })
-  // sio.on('get_message', onGetMessage)
   sio.on('first_move_waiting', onFirstMoveWaiting)
   sio.on('opp_disconnected', onOppDisconnected)
   sio.on('opp_reconnected', onOppReconnected)
   sio.on('draw_offer', onDrawOffer)
+  sio.on('logged_twice', showLoggedTwiceModal)
 
-  /*
-  $('#message_form').on('submit', function(e) {
-    e.preventDefault(
-    sendMessage()
-  })
-  */
   $drawBtn.on('click', function(e) {
     if ($drawBtn.prop('accept')) {
       acceptDrawOffer()
@@ -488,15 +465,15 @@
     sio.emit('resign')
   })
 
-	function isVisibleInMovesList($move) {
-		var movesListTop = $movesList.offset().top
-		var movesListBottom = movesListTop + $movesList.height()
+  function isVisibleInMovesList($move) {
+    var movesListTop = $movesList.offset().top
+    var movesListBottom = movesListTop + $movesList.height()
 
-		var moveTop = $move.offset().top
-		var moveBottom = moveTop + $move.height()
+    var moveTop = $move.offset().top
+    var moveBottom = moveTop + $move.height()
 
-		return movesListTop <= moveTop && moveBottom <= movesListBottom
-	}
+    return movesListTop <= moveTop && moveBottom <= movesListBottom
+  }
 
   function moveBack() {
     if (moveIndx >= 0 && !animation) {
@@ -511,7 +488,7 @@
       $moveCell.addClass('halfmove-active')
 
       // move to the previous row, if outside the moves list
-			if (moveIndx >=0 && !isVisibleInMovesList($moveCell)) {
+      if (moveIndx >= 0 && !isVisibleInMovesList($moveCell)) {
         $movesList.scrollTop($movesList.scrollTop() - $moveCell.height())
       }
 
@@ -535,7 +512,7 @@
       $moveCell.addClass('halfmove-active')
 
       // move to the next row, if outside the moves list
-			if (!isVisibleInMovesList($moveCell)) {
+      if (!isVisibleInMovesList($moveCell)) {
         $movesList.scrollTop($movesList.scrollTop() + $moveCell.height())
       }
 
@@ -564,7 +541,7 @@
     }
   }
 
-  function moveToEnd(play_sound = true) {
+  function moveToEnd(playSound=true) {
     if (moveIndx !== movesArray.length - 1 && !animation) {
       $movesList.find(`#move_${moveIndx}`).removeClass('halfmove-active')
       while (moveIndx + 1 !== movesArray.length) {
@@ -580,7 +557,7 @@
       $movesList.find(`#move_${moveIndx}`).addClass('halfmove-active')
       $movesList.scrollTop($movesList[0].scrollHeight)
 
-      if (play_sound) {
+      if (playSound) {
         moveSound.play()
       }
 
@@ -598,12 +575,12 @@
       return
     }
 
-		var $moveCell = $movesList.find(`#move_${moveIndx}`)
-		if (isVisibleInMovesList($moveCell)) {
-			return
-		}
+    var $moveCell = $movesList.find(`#move_${moveIndx}`)
+    if (isVisibleInMovesList($moveCell)) {
+      return
+    }
 
-		var row = Math.trunc(moveIndx / 2)
+    var row = Math.trunc(moveIndx / 2)
 
     var resultScroll
     if (moveIndxLastUpdate > moveIndx) {
@@ -681,7 +658,6 @@
     $newGameBtn.removeClass('is-hidden')
     $stopSearchBtn.addClass('is-hidden')
   })
-
 
   // Hide modal on press out of it
   $('.modal-background').on('click', function() {

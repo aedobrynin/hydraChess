@@ -520,22 +520,6 @@ def end_game(game_id: int,
     update_k_factor.delay(game.black_user.id)
 
 
-# TODO
-'''
-@celery.task(name="send_message", ignore_result=True)
-def send_message(game_id: int, sender: str, message: str):
-    """Sends chat message to game players. Currently disabled."""
-    game = Game.get(game_id)
-
-    for sid in (game.white_user.sid, game.black_user.sid):
-        if sid:
-            sio.emit('get_message',
-                     {'sender': sender,
-                      'message': message},
-                     room=sid)
-'''
-
-
 @celery.task(name="on_first_move_timed_out", ignore_result=True)
 def on_first_move_timed_out(game_id: int) -> None:
     """Interrupts game because of user didn't make first move for too long"""
