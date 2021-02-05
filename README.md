@@ -32,13 +32,15 @@ In tmux everything looks like this:
 
 
 ## Tests
-The API and login system are covered by the tests but the gaming part isn't
+The API and login system are covered by the tests.
+
+The gaming part was tested manually and using load testing module.
 
 ## License
 
-This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details
+This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details.
 
-## Libraries used
+## Used libraries
 
 * [chess.js](https://github.com/jhlywa/chess.js) - Used to check moves and game state on client side.
 * [chessboard.js](https://github.com/oakmac/chessboardjs) - Client side chess board
