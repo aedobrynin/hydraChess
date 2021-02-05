@@ -18,6 +18,8 @@ pip3 install -r requirements.txt
 sudo apt install redis
 ```
 
+3. Check configs in [hydraChess/config.py](hydraChess/config.py) and update them if needed.
+
 ## Running
 **You can run everything using scripts if:**
 1. Your env is in "dev" directory
@@ -32,13 +34,17 @@ In tmux everything looks like this:
 
 
 ## Tests
-The API and login system are covered by the tests but the gaming part isn't
+The API and login system are covered by tests.
+You can run them using ```python3 -m unittest``` from the project directory.
+Test network config can be found in [hydraChess/config.py](hydraChess/config.py).
+
+The gaming part was tested manually and using load testing module.
 
 ## License
 
-This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details
+This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details.
 
-## Libraries used
+## Used libraries
 
 * [chess.js](https://github.com/jhlywa/chess.js) - Used to check moves and game state on client side.
 * [chessboard.js](https://github.com/oakmac/chessboardjs) - Client side chess board
