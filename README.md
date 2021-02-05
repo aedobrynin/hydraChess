@@ -18,6 +18,8 @@ pip3 install -r requirements.txt
 sudo apt install redis
 ```
 
+3. Check configs in [hydraChess/config.py](hydraChess/config.py) and update them if needed.
+
 ## Running
 **You can run everything using scripts if:**
 1. Your env is in "dev" directory
@@ -32,7 +34,9 @@ In tmux everything looks like this:
 
 
 ## Tests
-The API and login system are covered by the tests.
+The API and login system are covered by tests.
+You can run them using ```python3 -m unittest``` from the project directory.
+Test network config can be found in [hydraChess/config.py](hydraChess/config.py).
 
 The gaming part was tested manually and using load testing module.
 
