@@ -18,7 +18,7 @@ Jinja2==2.11.2
 kombu==4.6.11
 libsass==0.20.0
 MarkupSafe==1.1.1
-Pillow==7.2.0
+Pillow==8.1.1
 prometheus-client==0.8.0
 python-chess==0.31.3
 python-engineio==3.13.1
